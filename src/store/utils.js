@@ -1,17 +1,5 @@
-import { create, all } from 'mathjs';
-
-const math = create(all);
-math.config({ number: 'number' });
-
-math.import({ 
-    poly: x => x,
-    nlog: x => {
-        const val = Number(x);
-        if (val <= 0) return 0;
-        return val * Math.log(val);
-    }
-}, { override: true });
-
+import * as math from 'mathjs';
+// finite guards for plotting
 const MIN_POSITIVE_Q = 1e-6;
 const MIN_LOG10_Q    = Math.log10(MIN_POSITIVE_Q);
 
@@ -150,121 +138,22 @@ export function applyLogRules(node) {
 }
 
 export function createLoggedFunction(expression) {
-    // ✅ DEFENSIVE CHECK: Handle undefined/null expressions
-    if (!expression || expression === 'undefined' || typeof expression !== 'string' || expression.trim() === '') {
-        console.warn('⚠️  createLoggedFunction called with invalid expression:', expression);
-        return function() { return -Infinity; };
+    // let loggedTree = applyLogRules(math.parse(expression));
+    // console.log(expression)
+    // console.log(loggedTree.toString())
+    // loggedTree = loggedTree.compile();
+
+    let loggedTree = applyLogRules(math.parse(expression)).compile();
+    function logged(value, scope = {n: value}) {
+        // let scope = {n: value};
+        return loggedTree.evaluate(scope);
     }
-    
-    // Validate syntax using mathjs
-    try {
-        math.parse(expression);
-    } catch (e) {
-        console.error('❌ Invalid expression:', expression, e);
-        throw new Error(`Invalid expression: ${expression}`);
-    }
-    
-    // Prepare expression for JavaScript evaluation
-    const jsExpr = expression.trim().replace(/\^/g, '**');
-    
-    return function(n, scope = {}) {
-        try {
-            // Create context with all values as numbers
-            const ctx = {
-                n: Number(n),
-                p: Number(scope.p || 1),
-                // Constants commonly used in math
-                e: Math.E,
-                E: Math.E,
-                pi: Math.PI,
-                PI: Math.PI,
-                // Math functions
-                sqrt: Math.sqrt,
-                log: (x, base) => {
-                    if (base == 2) return Math.log2(x);
-                    if (base == 'e' || !base) return Math.log(x);
-                    return Math.log(x) / Math.log(base);
-                },
-                log10: Math.log10,
-                log2: Math.log2,
-                exp: Math.exp,
-                pow: Math.pow,
-                abs: Math.abs,
-                max: Math.max,
-                min: Math.min,
-                poly: x => x,
-                nlog: x => x * Math.log(x)
-            };
-            
-            // Evaluate using Function constructor (SAFE!)
-            const fn = new Function(...Object.keys(ctx), `return (${jsExpr});`);
-            let result = Number(fn(...Object.values(ctx)));
-            
-            if (!Number.isFinite(result) || result <= 0) {
-                return -Infinity;
-            }
-            
-            return Math.log10(result);
-        } catch (error) {
-            console.error('Error:', expression, error);
-            throw error;
-        }
-    };
+    return logged;
 }
 
 export function createConvertedFunction(expression) {
-    // ✅ DEFENSIVE CHECK: Handle undefined/null expressions
-    if (!expression || expression === 'undefined' || typeof expression !== 'string' || expression.trim() === '') {
-        console.warn('⚠️  createConvertedFunction called with invalid expression:', expression);
-        return function() { return 0; };
-    }
-    
-    try {
-        math.parse(expression);
-    } catch (e) {
-        console.error('❌ Invalid expression:', expression, e);
-        throw new Error(`Invalid expression: ${expression}`);
-    }
-    
-    const jsExpr = expression.trim().replace(/\^/g, '**');
-    
-    return function(n, scope = {}) {
-        try {
-            const ctx = {
-                n: Number(n),
-                p: Number(scope.p || 1),
-                // Constants commonly used in math
-                e: Math.E,
-                E: Math.E,
-                pi: Math.PI,
-                PI: Math.PI,
-                // Math functions
-                sqrt: Math.sqrt,
-                log: (x, base) => {
-                    if (base == 2) return Math.log2(x);
-                    if (base == 'e' || !base) return Math.log(x);
-                    return Math.log(x) / Math.log(base);
-                },
-                log10: Math.log10,
-                log2: Math.log2,
-                exp: Math.exp,
-                pow: Math.pow,
-                abs: Math.abs,
-                max: Math.max,
-                min: Math.min,
-                poly: x => x,
-                nlog: x => x * Math.log(x)
-            };
-            
-            const fn = new Function(...Object.keys(ctx), `return (${jsExpr});`);
-            let result = Number(fn(...Object.values(ctx)));
-            
-            return Number.isFinite(result) ? result : 0;
-        } catch (error) {
-            console.error('Error:', expression, error);
-            throw error;
-        }
-    };
+    let replaced = expression.replaceAll("n", "(10^(n))");
+    return createLoggedFunction(replaced);
 }
 
 function simpleLinearRegression(x, y) {
@@ -283,7 +172,6 @@ function simpleLinearRegression(x, y) {
 
 function linearInterpolation(xValues, yValues, x) {
     let i = 0;
-    // Find the interval [x[i], x[i+1]] where the value x lies
     for (; i < xValues.length - 1; i++) {
         if (x <= xValues[i + 1]) break;
     }
@@ -366,6 +254,8 @@ export function getPhysicalQubits(year, roadmap, extrapolationType, baseFactor =
 
 // find when f(x) = 0
 // assumes f is a function such that f(a) * f(b) < 0 and f(b) > 0
+// export function bisectionMethod(f, a, b, tol = 1e-7, maxIter = 10000000) {
+// export function bisectionMethod(f, a, b, tol = 1e-7, maxIter = 400) {
 export function bisectionMethod(f, a, b, description = "", tol = 1e-7, maxIter = 1000) {
     let fa = f(a);
     let fb = f(b);
@@ -378,9 +268,15 @@ export function bisectionMethod(f, a, b, description = "", tol = 1e-7, maxIter =
     }
 
     if (fa >= 0) {
+        // console.log("fa is positive. implies that classical is always more expensive")
+        // console.log("Description: ", description) 
+        // console.log(`a: ${a}, b: ${b}, b-a: ${b-a}, fa: ${fa}, fb: ${fb}`);
         return 0;
     }
     if (fb < 0) {
+        // console.log("fb is negative. implies that quantum is always more expensive")
+        // console.log("Description: ", description) 
+        // console.log(`a: ${a}, b: ${b}, b-a: ${b-a}, fa: ${fa}, fb: ${fb}`);
         return Infinity;
     }
     
@@ -396,6 +292,14 @@ export function bisectionMethod(f, a, b, description = "", tol = 1e-7, maxIter =
             return null;
         }
         if (Math.abs(fc) < tol || Math.abs(b - a) < tol) {
+            // if (Math.abs(fc) >= tol) {
+            //     console.log("binary search range tolerance reached before value tolerance. function is very sensitive to changes in input.")
+            //     console.log("Description: ", description) 
+            //     console.log(`a: ${a}, b: ${b}, b-a: ${b-a}, c: ${c}, fa: ${fa}, fb: ${fb}, fc: ${fc}`);
+            // }
+            // else {
+            //     console.log("smooth binary search")
+            // }
             return c;
         }
 
@@ -463,6 +367,32 @@ export function problemSizeToQubits(logSize, qubitToProblemSize) {
     return finiteOr(Math.log10(qValue), MIN_LOG10_Q);
   }  
 
+/**
+ * Find the largest problem size (as log10) solvable within a compute-time budget.
+ * @param {Function} lqf  – logged quantum runtime: lqf(logN) = log10(runtime(N))
+ * @param {Function} lpf  – logged penalty: lpf(logN) = log10(penalty(N))
+ * @param {number} maxOpsLog – log10 of the max allowed total operations
+ * @param {number} slowdownLog – log10 of the hardware slowdown factor (added to quantum runtime)
+ * @returns {number} log10(max_problem_size) that fits within the budget
+ */
+export function findTimeFeasibleProblemSize(lqf, lpf, maxOpsLog, slowdownLog = 0) {
+    // Total quantum cost for problem of size 10^logN:
+    //   log10(total_ops) = lqf(logN) + lpf(logN) + slowdownLog
+    // We want: lqf(logN) + lpf(logN) + slowdownLog <= maxOpsLog
+    function f(logN) {
+        return lqf(logN) + lpf(logN) + slowdownLog - maxOpsLog;
+    }
+
+    // If even logN=0 (problem size=1) exceeds budget, nothing is feasible
+    if (f(0) > 0) return -Infinity;
+
+    // Use bisection to find the crossover point
+    const result = bisectionMethod(f, 0, 300, "timeFeasible", 1e-7, 1000);
+    if (result === null || result === Infinity) return Infinity;
+    if (result === 0) return 0;
+    return Math.log10(result);
+}
+
 // returns the fractional representation of the percentage input
 // -20% -> 0.8, +30% -> 1.3
 export function percentageToFraction(percentage) {
@@ -497,7 +427,7 @@ export function evaluateQubitMapping(
     q,
     {
       allowNonPositive = false,
-      clamp = 1e300   // big enough to show "very large" but still finite
+      clamp = 1e300   // big enough to show “very large” but still finite
     } = {}
   ) {
     const raw = String(expr || "").trim();
@@ -562,3 +492,4 @@ export function evaluateQubitMapping(
       return { ok: false, error: e?.message || "Parse error" };
     }
   }
+  

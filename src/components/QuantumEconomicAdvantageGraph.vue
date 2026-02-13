@@ -73,9 +73,18 @@ function processDataToGraph(data) {
     let quantumCostAdvantage = data.quantumCostAdvantage.filter(step => step[0] <= maxX && step[1] <= maxY);
     let quantumFeasible = data.quantumFeasible.filter(step => step[0] <= maxX && step[1] <= maxY);
 
+    // Capped feasibility (when max compute time cap is enabled)
+    const hasTimeCap = Array.isArray(data.quantumFeasibleCapped) && data.quantumFeasibleCapped.length > 0;
+    let quantumFeasibleCapped = hasTimeCap
+        ? data.quantumFeasibleCapped.filter(step => step[0] <= maxX && step[1] <= maxY)
+        : null;
+
+    // For advantage area calculations, use capped feasibility if available
+    const feasibleForAreas = hasTimeCap ? data.quantumFeasibleCapped : data.quantumFeasible;
+
     let quantumAdvantageArea = data.quantumAdvantage.filter(step => step[0] >= tStar);
     let quantumCostAdvantageArea = data.quantumCostAdvantage.filter(step => step[0] >= tCostStar);
-    const quantumFeasibleAux = Object.fromEntries(data.quantumFeasible.map(step => [step[0], step[1]]));
+    const quantumFeasibleAux = Object.fromEntries(feasibleForAreas.map(step => [step[0], step[1]]));
     const quantumCostAdvantageAux = Object.fromEntries(data.quantumCostAdvantage.map(step => [step[0], step[1]]));
     const quantumAdvantageAux = Object.fromEntries(data.quantumAdvantage.map(step => [step[0], step[1]]));
 
@@ -105,6 +114,8 @@ function processDataToGraph(data) {
         quantumAdvantage,
         quantumCostAdvantage,
         quantumFeasible,
+        quantumFeasibleCapped,
+        hasTimeCap,
         tStar,
         nStar,
         tCostStar,
@@ -319,45 +330,121 @@ function updateGraph() {
         })
     }
 
-    // feasibility line stays
-    series.push({
-        name: 'Quantum Feasibility',
-        data: [...data.quantumFeasible, ({
-            dataLabels: {
-                enabled: true,
-                align: 'left',
-                x: 3,
-                verticalAlign: 'middle',
-                overflow: false,
-                crop: false,
-                color: 'darkred',
-                shadow: false,
-                style: {
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    textOutline: 'none'
+    // feasibility lines
+    if (data.hasTimeCap && data.quantumFeasibleCapped) {
+        // When time cap is active: show uncapped as dashed green, capped as solid blue
+        series.push({
+            name: 'Max Qubits',
+            data: [...data.quantumFeasible, ({
+                dataLabels: {
+                    enabled: true,
+                    align: 'left',
+                    x: 3,
+                    verticalAlign: 'middle',
+                    overflow: false,
+                    crop: false,
+                    color: 'green',
+                    shadow: false,
+                    style: {
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        textOutline: 'none'
+                    },
+                    useHTML: true,
+                    formatter: function () {
+                        return '<div style="text-align: center;">Max Qubits<br>(no time cap)</div>';
+                    }
                 },
-                useHTML: true,
-                formatter: function () {
-                    return '<div style="text-align: cnter;">Quantum<br>Feasibility</div>';
-                }
-            },
-            x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
-            y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
-        })],
-        color: 'darkred',
-        dashStyle: 'dash',
-        zoneAxis: 'x',
-        zones: [{
-            value: data.tStar,
-        }, {
-            dashStyle: 'solid'
-        }],
-        marker: {
-            enabled: false,
-            symbol: 'circle'
-        }
-    })
+                x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
+                y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
+            })],
+            color: 'green',
+            dashStyle: 'dash',
+            marker: {
+                enabled: false,
+                symbol: 'circle'
+            }
+        })
+
+        series.push({
+            name: 'Quantum Feasibility',
+            data: [...data.quantumFeasibleCapped, ({
+                dataLabels: {
+                    enabled: true,
+                    align: 'left',
+                    x: 3,
+                    verticalAlign: 'middle',
+                    overflow: false,
+                    crop: false,
+                    color: 'darkred',
+                    shadow: false,
+                    style: {
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        textOutline: 'none'
+                    },
+                    useHTML: true,
+                    formatter: function () {
+                        return '<div style="text-align: center;">Quantum<br>Feasibility<br>(time-capped)</div>';
+                    }
+                },
+                x: data.quantumFeasibleCapped[data.quantumFeasibleCapped.length - 1][0],
+                y: data.quantumFeasibleCapped[data.quantumFeasibleCapped.length - 1][1],
+            })],
+            color: 'darkred',
+            dashStyle: 'solid',
+            zoneAxis: 'x',
+            zones: [{
+                value: data.tStar,
+            }, {
+                dashStyle: 'solid'
+            }],
+            marker: {
+                enabled: false,
+                symbol: 'circle'
+            }
+        })
+    } else {
+        // No time cap: single feasibility line (original behavior)
+        series.push({
+            name: 'Quantum Feasibility',
+            data: [...data.quantumFeasible, ({
+                dataLabels: {
+                    enabled: true,
+                    align: 'left',
+                    x: 3,
+                    verticalAlign: 'middle',
+                    overflow: false,
+                    crop: false,
+                    color: 'darkred',
+                    shadow: false,
+                    style: {
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        textOutline: 'none'
+                    },
+                    useHTML: true,
+                    formatter: function () {
+                        return '<div style="text-align: center;">Quantum<br>Feasibility</div>';
+                    }
+                },
+                x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
+                y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
+            })],
+            color: 'darkred',
+            dashStyle: 'dash',
+            zoneAxis: 'x',
+            zones: [{
+                value: data.tStar,
+            }, {
+                dashStyle: 'solid'
+            }],
+            marker: {
+                enabled: false,
+                symbol: 'circle'
+            }
+        })
+    }
 
     // speed line
     if (props.showSteps) {

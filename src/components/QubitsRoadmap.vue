@@ -34,7 +34,7 @@ const chartOptions = {
     tooltip: {
         useHTML: true,
         formatter: function () {
-            return `Qubits: ${parseInt(10 ** this.y)}<br>Year: ${this.x}`;
+            return `Qubits: ${utils.toBase10HTML(this.y)}<br>Year: ${this.x}`;
         }
     },
     legend: {
@@ -93,8 +93,9 @@ const chartOptions = {
             },
             dataLabels: {
                 enabled: true,
+                useHTML: true,
                 formatter: function () {
-                    return parseInt(10 ** this.y);
+                    return utils.toBase10HTML(this.y);
                 },
                 style: {
                     fontSize: '9px',
@@ -114,8 +115,9 @@ const chartOptions = {
             },
             dataLabels: {
                 enabled: true,
+                useHTML: true,
                 formatter: function () {
-                    return parseInt(10 ** this.y);
+                    return utils.toBase10HTML(this.y);
                 },
                 style: {
                     fontSize: '9px',

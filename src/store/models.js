@@ -1,176 +1,114 @@
-/**
- * models.js - Pinia Store for Quantum Computing Models
- * 
- * This store manages the state for quantum computing advantage calculations,
- * including problem configurations, hardware specifications, and algorithm variants.
- */
+import { defineStore } from 'pinia'
+import { ref, toRaw } from 'vue'
 
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
+const modelTemplate = {
+    id: 1,
+    problemName: "Integer Factorization",
+    classicalRuntimeInput: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3)) / p",
+    classicalWork: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3))",
+    quantumRuntimeInput: "n^(2) * log(n, e)",
+    quantumWork: "n^(2) * log(n, e) * q",
+    penaltyInput: "sqrt(q)",
+    qubitToProblemSize: "q",
+    hardwareName: 'IBM (Superconducting)',
+    roadmap: {
+        2020: 27,
+        // 2022: 127,
+        2024: 133,
+        2025: 156,
+        // 2029: 200,
+        // 2033: 2000,
+        2028: 1092,
+        // 2029: 22974,
+        // 2033: 100000
+    },
+    roadmapUnit: "physical",
+    extrapolationType: 'exponential',
+    hardwareSlowdown: 3.78,
+    costFactor: 8,
+    quantumImprovementRate: -10,
+    physicalLogicalQubitsRatio: 264,
+    ratioImprovementRate: -23,
+    costImprovementRate: -10,
+    processors: 5,
+    maxComputeTimeLog: null,
+    advancedSlowdown: {
+        gateTime: 12,
+        cpuGHz: 5,
+        speed: 60,
+        gateOverhead: 100,
+        algorithmConstant: 1,
+    },
+
+}
+
+function deepClone(obj) {
+    const clone = Array.isArray(obj) ? [] : {};
+
+    Object.keys(obj).forEach(key => {
+        const value = obj[key];
+        clone[key] = (typeof value === "object" && value !== null) ? deepClone(value) : value;
+    });
+
+    return clone;
+}
 
 export const useModelsStore = defineStore('models', () => {
-  // Initialize with one default model
-  const models = ref([
-    {
-      id: 1,
-      problemName: 'Integer Factorization',
-      hardwareName: 'IBM (Superconducting)',
-      
-      // Runtime expressions
-      classicalRuntimeInput: 'n^3',
-      quantumRuntimeInput: 'n^2',
-      classicalWork: 'n^3',
-      quantumWork: 'n^2',
-      
-      // Qubit mapping
-      qubitToProblemSize: '2^q',
-      
-      // Hardware parameters
-      penaltyInput: '1',
-      processors: 5,
-      hardwareSlowdown: 8.48,
-      costFactor: 8,
-      quantumImprovementRate: -10,
-      costImprovementRate: -10,
-      physicalLogicalQubitsRatio: 1000,
-      ratioImprovementRate: -23,
-      
-      // Roadmap
-      roadmap: {
-        2018: 20,
-        2021: 27,
-        2024: 156,
-      },
-      roadmapUnit: 'physical',
-      extrapolationType: 'exponential',
-      
-      // Advanced slowdown parameters
-      advancedSlowdown: {
-        gateTime: 60,
-        cpuGHz: 5,
-        speed: 300,
-        gateOverhead: 100,
-        algorithmConstant: 1,
-      },
-      
-      // Max compute time cap (null = no cap)
-      maxComputeTimeCap: null,
-      
-      reference: '20Q Penguin (2018), 127Q Eagle (2021), 1121Q Condor (2023), 156Q Heron (2024)',
+    const models = ref(
+        [
+
+            deepClone(modelTemplate)
+        ]
+    )
+
+    function addModel() {
+        const model = deepClone(modelTemplate)
+        if (models.value.length === 0) {
+            model.id = 1
+        } else {
+            model.id = Math.max(...models.value.map(m => m.id)) + 1
+        }
+        models.value.push(model)
+        // i = current scroll position
+        var i = window.scrollY;
+        var int = setInterval(function () {
+            window.scrollTo(0, i);
+            i += 20;
+            if (i >= document.body.scrollHeight) clearInterval(int);
+        }, 10);
+
     }
-  ]);
 
-  // Counter for generating unique IDs
-  const nextId = ref(2);
-
-  /**
-   * Add a new model
-   * @param {Object} modelData - Model configuration
-   * @returns {Object} The newly created model
-   */
-  function addModel(modelData = {}) {
-    const newModel = {
-      id: nextId.value++,
-      problemName: modelData.problemName || 'Integer Factorization',
-      hardwareName: modelData.hardwareName || 'IBM (Superconducting)',
-      
-      classicalRuntimeInput: modelData.classicalRuntimeInput || 'n^3',
-      quantumRuntimeInput: modelData.quantumRuntimeInput || 'n^2',
-      classicalWork: modelData.classicalWork || 'n^3',
-      quantumWork: modelData.quantumWork || 'n^2',
-      
-      qubitToProblemSize: modelData.qubitToProblemSize || '2^q',
-      
-      penaltyInput: modelData.penaltyInput || '1',
-      processors: modelData.processors ?? 5,
-      hardwareSlowdown: modelData.hardwareSlowdown ?? 8.48,
-      costFactor: modelData.costFactor ?? 8,
-      quantumImprovementRate: modelData.quantumImprovementRate ?? -10,
-      costImprovementRate: modelData.costImprovementRate ?? -10,
-      physicalLogicalQubitsRatio: modelData.physicalLogicalQubitsRatio ?? 1000,
-      ratioImprovementRate: modelData.ratioImprovementRate ?? -23,
-      
-      roadmap: modelData.roadmap || {
-        2018: 20,
-        2021: 27,
-        2024: 156,
-      },
-      roadmapUnit: modelData.roadmapUnit || 'physical',
-      extrapolationType: modelData.extrapolationType || 'exponential',
-      
-      advancedSlowdown: modelData.advancedSlowdown || {
-        gateTime: 60,
-        cpuGHz: 5,
-        speed: 300,
-        gateOverhead: 100,
-        algorithmConstant: 1,
-      },
-      
-      maxComputeTimeCap: modelData.maxComputeTimeCap || null,
-      
-      reference: modelData.reference || '',
-    };
-
-    models.value.push(newModel);
-    return newModel;
-  }
-
-  /**
-   * Remove a model by ID
-   * @param {number} id - Model ID to remove
-   */
-  function removeModel(id) {
-    const index = models.value.findIndex(m => m.id === id);
-    if (index !== -1) {
-      models.value.splice(index, 1);
+    function removeModel(id) {
+        models.value = models.value.filter(m => m.id !== id)
     }
-  }
 
-  /**
-   * Update a model
-   * @param {number} id - Model ID to update
-   * @param {Object} updates - Fields to update
-   */
-  function updateModel(id, updates) {
-    const model = models.value.find(m => m.id === id);
-    if (model) {
-      Object.assign(model, updates);
+
+    function duplicateModel(id) {
+        const model = models.value.find(m => m.id === id)
+        const clone = deepClone(model)
+        clone.id = Math.max(...models.value.map(m => m.id)) + 1
+        clone.roadmap = JSON.parse(JSON.stringify(model.roadmap))
+
+        models.value.push(clone)
+        // scroll to bottom
+        var i = window.scrollY;
+        var int = setInterval(function () {
+            window.scrollTo(0, i);
+            i += 20;
+            if (i >= document.body.scrollHeight) clearInterval(int);
+        }, 10);
     }
-  }
 
-  /**
-   * Get a model by ID
-   * @param {number} id - Model ID
-   * @returns {Object|undefined} The model or undefined
-   */
-  function getModelById(id) {
-    return models.value.find(m => m.id === id);
-  }
+    function updateModel(id, model) {
+        models.value = models.value.map(m => m.id === id ? model : m)
+    }
 
-  /**
-   * Duplicate a model
-   * @param {number} id - Model ID to duplicate
-   * @returns {Object|null} The new model or null if original not found
-   */
-  function duplicateModel(id) {
-    const original = models.value.find(m => m.id === id);
-    if (!original) return null;
-
-    const duplicate = {
-      ...JSON.parse(JSON.stringify(original)), // Deep clone
-      id: nextId.value++,
-    };
-
-    models.value.push(duplicate);
-    return duplicate;
-  }
-
-  return {
-    models,
-    addModel,
-    removeModel,
-    updateModel,
-    getModelById,
-    duplicateModel,
-  };
-});
+    return {
+        models,
+        updateModel,
+        addModel,
+        removeModel,
+        duplicateModel
+    }
+})
