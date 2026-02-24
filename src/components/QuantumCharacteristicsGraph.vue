@@ -133,12 +133,12 @@ const chartOptions = {
             }
         }, {
             value: data.lastRoadmapPoint,
-            color: 'lightgray',
+            color: '#6B7280',
             width: 2,
             label: {
                 text: 'Last Roadmap Data',
                 style: {
-                    color: 'lightgray'
+                    color: '#6B7280'
                 }
             }
         },
@@ -262,13 +262,13 @@ function updateGraph() {
         }
     }, {
         value: data.lastRoadmapPoint,
-        color: 'lightgray',
+        color: '#6B7280',
         width: 2,
         label: {
             rotation: 0,
             text: 'Last Roadmap<br> Data',
             style: {
-                color: 'lightgray'
+                color: '#6B7280'
             }
         }
     },
@@ -287,7 +287,7 @@ function updateGraph() {
                     verticalAlign: 'middle',
                     overflow: false,
                     crop: false,
-                    color: 'indigo',
+                    color: '#a32035',
                     shadow: false,
                     style: {
                         fontSize: '12px',
@@ -305,7 +305,7 @@ function updateGraph() {
                 y: data.logicalQubits[data.logicalQubits.length - 1][1],
 
             })],
-            color: 'indigo',
+            color: '#a32035',
             dashStyle: 'solid',
             zoneAxis: 'x',
             zones: [{

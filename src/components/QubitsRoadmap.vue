@@ -77,7 +77,7 @@ const chartOptions = {
         {
             data: physicalQubits.value,
             type: 'line',
-            color: '#002D9D55',
+            color: '#a3203555',
             enableMouseTracking: false,
             // hide on legend 
             showInLegend: false,

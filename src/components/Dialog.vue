@@ -39,12 +39,12 @@
                                 <div class="space-x-8">
 
                                     <button type="button"
-                                        class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-[#002D9D] hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                        class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-[#a32035] hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a32035] focus-visible:ring-offset-2"
                                         @click="emit('reset')">
                                         Reset
                                     </button>
                                     <button type="button"
-                                        class="inline-flex justify-center rounded-md border border-transparent bg-[#002D9D] px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                        class="inline-flex justify-center rounded-md border border-transparent bg-[#a32035] px-4 py-2 text-sm font-medium text-white hover:bg-[#8a1a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a32035] focus-visible:ring-offset-2"
                                         @click="emit('save')">
                                         Save
                                     </button>

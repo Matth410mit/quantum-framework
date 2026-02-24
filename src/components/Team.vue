@@ -153,43 +153,43 @@ const accentureMembers = computed(() => teamMembers.filter(member => member.affi
 <!-- ////////// -->
 <template>
     <div class="max-w-5xl mx-auto my-8 px-4">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center" id="Models">Team</h1>
+        <h1 class="text-3xl font-bold text-[#1f2937] mb-6 text-center" id="Models">Team</h1>
 
-        <p class="text-center mb-8">
+        <p class="text-center mb-8 text-[#6b7280]">
             The Quantum Economic Advantage Calculator is a joint effort between MIT FutureTech and Accenture.
         </p>
 
         <div class="grid gap-8 sm:grid-cols-3">
             <!-- Left: MIT FutureTech (Double Column) -->
             <div class="sm:col-span-2">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4 text-center">MIT FutureTech</h2>
+                <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">MIT FutureTech</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <div v-for="member in mitMembers" :key="member.name" class="flex flex-col items-center bg-gray-50 p-6 rounded-lg shadow-md">
+                    <div v-for="member in mitMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)]">
                         <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
                         <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
-                        <h2 class="text-lg font-semibold text-gray-800">{{ member.name }}</h2>
-                        <p class="text-sm text-gray-600">{{ member.role }}</p>
+                        <h2 class="text-lg font-semibold text-[#1f2937]">{{ member.name }}</h2>
+                        <p class="text-sm text-[#6b7280]">{{ member.role }}</p>
                     </div>
                 </div>
             </div>
 
             <!-- Right: Accenture (Single Column) -->
-            <div class="border-l border-gray-300 pl-6">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4 text-center">Accenture</h2>
+            <div class="border-l border-[#d1d1d17d] pl-6">
+                <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">Accenture</h2>
                 <div class="flex flex-col gap-4">
-                    <div v-for="member in accentureMembers" :key="member.name" class="flex flex-col items-center bg-gray-50 p-6 rounded-lg shadow-md">
+                    <div v-for="member in accentureMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)]">
                         <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
                         <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
-                        <h2 class="text-lg font-semibold text-gray-800">{{ member.name }}</h2>
-                        <p class="text-sm text-gray-600">{{ member.role }}</p>
+                        <h2 class="text-lg font-semibold text-[#1f2937]">{{ member.name }}</h2>
+                        <p class="text-sm text-[#6b7280]">{{ member.role }}</p>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="mt-12 text-center text-gray-700 text-sm">
+        <div class="mt-12 text-center text-[#6b7280] text-sm">
             <p>
-                If you have any questions or concerns, feel free to contact  
-                <a href="mailto:someone@example.com" class="text-blue-600 hover:underline">someone@example.com</a>.
+                If you have any questions or concerns, feel free to contact
+                <a href="mailto:someone@example.com" class="text-[#a32035] hover:underline">someone@example.com</a>.
             </p>
         </div>
     </div>
@@ -206,6 +206,7 @@ const teamMembers = [
     { name: 'Hrvoje Kukina', image: '/6616978ed50987169fb845b7_hrvoje_picture - Hrvoje Kukina-p-500.jpg', affiliation: 'MIT FutureTech', role: 'PhD Candidate' },
     { name: 'Eleanor Crane', image: "/eleanor_crane.jpeg", affiliation: 'MIT FutureTech', role: 'Researcher' },
     { name: 'Johannes Galatsanos-Dueck', image: '', affiliation: 'MIT FutureTech', role: 'Title' },
+    { name: 'Matthew Garcia', image: '/matthew-garcia.jpg', affiliation: 'MIT FutureTech', role: 'Student Contributor' },
     { name: 'Prashant P. Shukla', image: 'PrashantShukla.jpg', affiliation: 'Accenture', role: 'Accenture Research Lead - MIT IDE' },
     { name: 'Carl Dukatz', image: 'Carl_Dukatz_Profile_Picture 1.jpeg', affiliation: 'Accenture', role: 'Managing Director - Next Gen Compute' },
     { name: 'Kung-Chuan Hsu', image: 'profile_pic_KC.jpg', affiliation: 'Accenture', role: 'Quantum Information Scientist - Next Gen Compute' },

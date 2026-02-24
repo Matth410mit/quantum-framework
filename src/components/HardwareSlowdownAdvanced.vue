@@ -14,12 +14,12 @@
                     <div class="text-xs ">
                         <input hidden type="radio" id="simple" value="simple" v-model="inputType" />
                         <label class="border rounded-sm transition-all text-center p-1" :class="{
-                            'bg-[#002D9D] text-white': inputType === 'simple',
+                            'bg-[#a32035] text-white': inputType === 'simple',
                             'bg-gray-100': inputType !== 'simple'
                         }" for="simple">Simple</label>
                         <input hidden type="radio" id="manual" value="manual" v-model="inputType" />
                         <label class="border rounded-sm transition-all text-center p-1" :class="{
-                            'bg-[#002D9D] text-white': inputType === 'manual',
+                            'bg-[#a32035] text-white': inputType === 'manual',
                             'bg-gray-100': inputType !== 'manual'
                         }" for="manual">Manual</label>
                     </div>
@@ -71,7 +71,7 @@
                 </div>
                 <div v-else>
                     <div class="flex items-center justify-between w-full gap-2">
-                        <input class="flex-1 accent-[#002D9D]" type="range" id="speed" v-model="speed" min="1"
+                        <input class="flex-1 accent-[#a32035]" type="range" id="speed" v-model="speed" min="1"
                             max="1000000" />
                         <input class="bg-gray-100 p-2 rounded-lg text-center w-1/5" type="number" id="speed"
                             v-model="speed" />
@@ -87,7 +87,7 @@
                     needs to take to maintain
                     its error correction.</p>
                 <div class="flex items-center justify-between w-full gap-2">
-                    <input class="flex-1 accent-[#002D9D]" type="range" id="gateOverhead" v-model="gateOverhead" min="1"
+                    <input class="flex-1 accent-[#a32035]" type="range" id="gateOverhead" v-model="gateOverhead" min="1"
                         max="1000" />
                     <input class="bg-gray-100 p-2 rounded-lg text-center w-1/5" type="number" id="gateOverhead"
                         v-model="gateOverhead" />
@@ -102,7 +102,7 @@
                     from the quantum algorithm's.
                 </p>
                 <div class="flex items-center justify-between w-full gap-2">
-                    <input class="flex-1 accent-[#002D9D]" type="range" id="algorithmConstant"
+                    <input class="flex-1 accent-[#a32035]" type="range" id="algorithmConstant"
                         v-model="algorithmConstant" min="0.1" max="2" step="0.1" />
                     <input class="bg-gray-100 p-2 rounded-lg text-center w-1/5" type="number" id="algorithmConstant"
                         v-model="algorithmConstant" />

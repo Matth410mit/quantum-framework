@@ -614,20 +614,20 @@ const editRoadmapRef = ref(null);
             <div class="flex flex-wrap  items-center gap-4">
                 <!-- toogle quantum only -->
                 <label class="flex items-center gap-1 cursor-pointer">
-                    <Switch v-model="editMode" :class="!editMode ? 'bg-[#002D9D]' : 'bg-gray-400'"
+                    <Switch v-model="editMode" :class="!editMode ? 'bg-[#a32035]' : 'bg-gray-400'"
                         class="relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
                         <span class="sr-only">Advanced Options</span>
                         <span aria-hidden="true" :class="!editMode ? 'translate-x-4' : 'translate-x-0'"
                             class="pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out" />
 
                     </Switch>
-                    <span class="text-sm" :class="!editMode ? 'text-[#002D9D]' : 'text-gray-400'">
+                    <span class="text-sm" :class="!editMode ? 'text-[#a32035]' : 'text-gray-400'">
                         Advanced Options
                     </span>
 
                 </label>
                 <button
-                    class="flex items-center justify-center rounded-md bg-blue-100 ring-1 ring-opacity-50 ring-[#002D9D] px-2 py-2 text-sm text-[#002D9D] hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    class="flex items-center justify-center rounded-md bg-red-50 ring-1 ring-opacity-50 ring-[#a32035] px-2 py-2 text-sm text-[#a32035] hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a32035] focus-visible:ring-offset-2"
                     @click="duplicateModel">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="w-4 h-4">
@@ -856,7 +856,7 @@ const editRoadmapRef = ref(null);
                                     </h3>
                                     <ul class="text-sm">
                                         <li class="ml-4 list-disc">
-                                            <a class="text-[#012D9D] hover:underline"
+                                            <a class="text-[#a32035] hover:underline"
                                                 href="https://arxiv.org/pdf/2310.15505.pdf" target="_blank"
                                                 rel="noopener noreferrer">
                                                 The Quantum Tortoise and the Classical Hare:
@@ -883,7 +883,7 @@ const editRoadmapRef = ref(null);
                         time it takes a quantum computer to perform one.
                     </p>
                     <div class="flex items-center justify-between w-full gap-2 mt-2 mb-4">
-                        <input class="flex-1 accent-[#002D9D]" type="range" id="hardwareSlowdown" min="0" max="16"
+                        <input class="flex-1 accent-[#a32035]" type="range" id="hardwareSlowdown" min="0" max="16"
                             step="0.5" v-model="model.hardwareSlowdown" />
                         <div
                             class="bg-gray-100 p-2 rounded-lg text-center w-1/5 flex items-center justify-center relative">
@@ -910,7 +910,7 @@ const editRoadmapRef = ref(null);
                         classical operation.
                     </p>
                     <div class="flex items-center justify-between w-full gap-2 mt-2 mb-4">
-                        <input class="flex-1 accent-[#002D9D]" type="range" id="costFactor" min="0" max="16" step="0.5"
+                        <input class="flex-1 accent-[#a32035]" type="range" id="costFactor" min="0" max="16" step="0.5"
                             v-model="model.costFactor" />
                         <div
                             class="bg-gray-100 p-2 rounded-lg text-center w-1/5 flex items-center justify-center relative">
@@ -943,7 +943,7 @@ const editRoadmapRef = ref(null);
                             Physical-Logical Qubit Ratio is unused when roadmap is defined
                             in terms of logical qubits.
                         </div>
-                        <input class="flex-1 accent-[#002D9D]" type="range" id="physical_logical_ratio"
+                        <input class="flex-1 accent-[#a32035]" type="range" id="physical_logical_ratio"
                             v-model="model.physicalLogicalQubitsRatio" min="3" max="2000" :disabled="lockPLQR" />
                         <input class="bg-gray-100 p-2 rounded-lg text-center w-1/5" type="number"
                             id="physical_logical_ratio" v-model="model.physicalLogicalQubitsRatio"
@@ -972,14 +972,14 @@ const editRoadmapRef = ref(null);
 
 <style lang="css" scoped>
 .custom-multiselect :deep(.multiselect__tags) .multiselect__tag {
-    background-color: #002D9D;
+    background-color: #a32035;
     z-index: 999 !important;
 
 }
 
 .custom-multiselect :deep(.multiselect__option) {
     background-color: white;
-    color: #002D9D;
+    color: #a32035;
     border-radius: 4px;
     padding: 0.25rem;
     margin: 0.25rem;
@@ -1001,7 +1001,7 @@ const editRoadmapRef = ref(null);
 }
 
 .custom-multiselect :deep(.multiselect__option)--highlight {
-    background-color: #002D9D;
+    background-color: #a32035;
     color: white;
     border-radius: 4px;
     padding: 0.25rem;

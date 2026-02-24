@@ -135,7 +135,7 @@
                     <div class="mt-3">
                         <label class="font-medium text-sm" for="processors">Processors</label>
                         <div class="flex items-center justify-between w-full gap-2 mt-2">
-                            <input class="flex-1 accent-[#002D9D]" type="range" id="processors" min="0" max="20"
+                            <input class="flex-1 accent-[#a32035]" type="range" id="processors" min="0" max="20"
                                 step="1" v-model="processors" />
                             <div
                                 class="bg-white p-2 rounded-lg text-center w-1/5 flex items-center justify-center relative">
@@ -149,7 +149,7 @@
                     <div class="mt-3">
                         <div class="flex items-center gap-2">
                             <input type="checkbox" id="maxComputeTimeEnabled" v-model="maxComputeTimeEnabled"
-                                class="accent-[#002D9D]" />
+                                class="accent-[#a32035]" />
                             <label class="font-medium text-sm" for="maxComputeTimeEnabled">
                                 Max Compute Time Cap
                             </label>
@@ -160,7 +160,7 @@
                             within the operation budget, accounting for runtime and connectivity penalty.
                         </p>
                         <div v-if="maxComputeTimeEnabled" class="flex items-center justify-between w-full gap-2 mt-2">
-                            <input class="flex-1 accent-[#002D9D]" type="range" id="maxComputeTimeLog" min="6" max="30"
+                            <input class="flex-1 accent-[#a32035]" type="range" id="maxComputeTimeLog" min="6" max="30"
                                 step="0.5" v-model="maxComputeTimeLogValue" />
                             <div
                                 class="bg-white p-2 rounded-lg text-center w-1/4 flex items-center justify-center relative">

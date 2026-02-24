@@ -27,7 +27,7 @@ const rows = [
             inputs—such as hardware speeds, qubit roadmaps, and algorithmic runtimes—to explore how different factors 
             influence the timeline for QEA. The tool then generates visualizations, offering an intuitive way to 
             understand when quantum computing may surpass classical methods for various computational tasks. </p>
-        <h2 class="text-2xl font-bold text-gray-800" id="Models"> Models </h2>
+        <h2 class="text-2xl font-bold text-[#1f2937]" id="Models"> Models </h2>
         <p class="text-gray=900 text-justify my-4"> A model in the framework refers to a specific
             problem-hardware instance being examined. Each model tracks its own parameters and displays its own
             graphs. </p>
@@ -35,7 +35,7 @@ const rows = [
             created which is ready to edit. Changing any input to the model will have its effects immediately displayed
             on the corresponding graphs (unless the parameter was changed in a popup menu in which case the user must
             hit save). </p>
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Simple vs Advanced View"> Simple vs Advanced View </h3>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Simple vs Advanced View"> Simple vs Advanced View </h3>
         <p class="text-gray=900 text-justify my-4"> There are two ways of displaying a model on the user interface. The
             first is a simple view in which only the two major inputs of problem and hardware can be seen and selected.
             All the graphs are still visible and this view allows for easy comparison between them across multiple
@@ -47,15 +47,15 @@ const rows = [
             same options selected for problem and hardware, yet have very different choices for the remaining
             parameters. This could result in two models with the same options visible for their simple views but with
             drastically different graphs. </p>
-        <h2 class="text-2xl font-bold text-gray-800" id="Inputs"> Inputs </h2>
+        <h2 class="text-2xl font-bold text-[#1f2937]" id="Inputs"> Inputs </h2>
         <p class="text-gray=900 text-justify my-4"> Each input into the models can be classified as either related to
             the problem or the hardware. We will refer to the problem and roadmap inputs themselves as major inputs and
             the inputs dependent on them as minor inputs. Each selectable option for the major inputs has default values
             for all of its corresponding minor inputs; as a result, changing a model's major inputs will automatically
             override the values of all its associated minor inputs. Changing a minor input has no effect on the other
             parameters. </p>
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Problem Inputs"> Problem Inputs </h3>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Problem"> Problem </h4>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Problem Inputs"> Problem Inputs </h3>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Problem"> Problem </h4>
         <p class="text-gray=900 text-justify my-4"> 
             The problems serve as a primary input to the framework, determining the classical and quantum runtimes 
             under comparison. The tool provides preset options for users to explore, such as integer factorization, 
@@ -79,12 +79,12 @@ const rows = [
             runtime with a single processor, <span v-html="katex.renderToString('C(n,1)')"></span>, representing 
             the total number of operations required.
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Qubit To Problem Size"> Qubit To Problem Size </h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Qubit To Problem Size"> Qubit To Problem Size </h4>
         <p class="text-gray=900 text-justify my-4"> Qubit to Problem Size (QPS) is a function which maps logical qubits
             to the maximum problem size achievable with said amount of qubits. The inverse of this function
             (<span v-html="katex.renderToString('\\text{QPS}^{-1}')"></span>) is also used in some calculations. </p>
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Hardware Inputs"> Hardware Inputs </h3>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Roadmap"> Roadmap </h4>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Hardware Inputs"> Hardware Inputs </h3>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Roadmap"> Roadmap </h4>
         <p class="text-gray=900 text-justify my-4"> 
             The primary hardware input is which quantum roadmap the tool will use to extrapolate the number of 
             available qubits. The calculator allows users to modify the existing roadmaps directly. Qubit-year 
@@ -105,7 +105,7 @@ const rows = [
             inputting a roadmap for logical qubits. In this case, the tool extrapolates the number of logical 
             qubits directly from the user-defined points, skipping the intermediary calculations involving physical-logical qubit ratios.
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Hardware Slowdown"> Hardware Slowdown </h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Hardware Slowdown"> Hardware Slowdown </h4>
         <p class="text-gray=900 text-justify my-4"> 
             Hardware slowdown, as previously described, refers to the number of operations a classical computer 
             can perform in the time it takes a comparably priced quantum computer to perform a single operation. 
@@ -136,7 +136,7 @@ const rows = [
             speed by the quantum 2-qubit gate time, giving a direct comparison of how many classical operations can be 
             executed in the time it takes for a single quantum cycle.
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Quantum Improvement Rate"> Quantum Improvement Rate </h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Quantum Improvement Rate"> Quantum Improvement Rate </h4>
         <p class="text-gray=900 text-justify my-4"> 
             The quantum improvement rat (QIR) represents this framework's method of modeling changes in the hardware 
             slowdown over time, expressed as the percentage improvement year-to-year. (In the calculator, improvement 
@@ -156,18 +156,18 @@ const rows = [
             this represents a rather pessimistic outlook.
         </p>
         
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Physical-Logical Qubit Ratio"> Physical-Logical Qubit Ratio </h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Physical-Logical Qubit Ratio"> Physical-Logical Qubit Ratio </h4>
         <p class="text-gray=900 text-justify my-4"> The physical-logical qubit ratio (PLQR) represents how many physical 
             qubits are needed to encode a single logical qubit. Its value can be directly input into the calculator. 
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Physical-Logical Qubit Ratio Improvement Rate"> Physical-Logical Qubit Ratio Improvement Rate</h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Physical-Logical Qubit Ratio Improvement Rate"> Physical-Logical Qubit Ratio Improvement Rate</h4>
         <p class="text-gray=900 text-justify my-4"> 
             Just as the hardware slowdown evolves based on the quantum improvement rate, the PLQR is influenced by the 
             physical-logical qubit ratio improvement rate (RIR). This adjustment is input and calculated in the same 
             manner as the quantum improvement rate. The decay of PLQR is limited to a minimum value of 3, 
             reflecting the constraints imposed by the most basic error correction schemes.
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Connectivity Penalty"> Connectivity Penalty</h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Connectivity Penalty"> Connectivity Penalty</h4>
         <p class="text-gray=900 text-justify my-4"> 
             Connectivity refers to the arrangement of interactions between qubits within a quantum system, often 
             represented as a qubit interaction graph, where vertices correspond to qubits and edges denote 
@@ -180,13 +180,13 @@ const rows = [
             was designed to be as freely customizable as the runtimes themselves. The tool accepts expressions in terms of <span v-html="katex.renderToString('q')"></span>, 
             allowing users to adjust connectivity penalties to reflect the specific constraints of their quantum hardware.
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Processors">Processors</h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Processors">Processors</h4>
         <p class="text-gray=900 text-justify my-4"> 
             This input represents the number of processors <span v-html="katex.renderToString('10^p')"></span> that would exist in a classical machine that is 
             comparably priced to the quantum one being considered. The number of processors reduces the classical 
             runtime as dictated by its expression. Like the hardware slowdown, it is input logarithmically.
         </p>
-        <h4 class="text-lg font-medium text-gray-800 mt-8" id="Cost Improvement Rate">Cost Improvement Rate</h4>
+        <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Cost Improvement Rate">Cost Improvement Rate</h4>
         <p class="text-gray=900 text-justify my-4"> 
             The cost improvement rate (CIR) captures the relative rates of cost reduction for quantum and classical 
             operations over time. Specifically, it is defined as the ratio of the annual rates of change in the 
@@ -207,7 +207,7 @@ const rows = [
             costs, though users have the flexibility to modify or disregard it if needed.
         </p>
 
-        <h2 class="text-2xl font-bold text-gray-800" id="Calculations">Calculations</h2>
+        <h2 class="text-2xl font-bold text-[#1f2937]" id="Calculations">Calculations</h2>
         <p class="text-gray=900 text-justify my-4"> 
         With all of the calculator’s inputs introduced, we can finally discuss how the tool calculates its findings.
         Before we dive into the mathematics, let us present the table below showing how each input is expressed in the equations.
@@ -269,7 +269,7 @@ const rows = [
             <span v-html="katex.renderToString('t^* = t \\text{ }|\\text{ } \\text{Feas}(t) = \\text{Adv}(t)')"></span>
         </p>
 
-        <h2 class="text-2xl font-bold text-gray-800" id="Cost Advantage"> Cost Advantage </h2>
+        <h2 class="text-2xl font-bold text-[#1f2937]" id="Cost Advantage"> Cost Advantage </h2>
 
         <p class="text-gray=900 text-justify my-4">
             All of the insights provided by the calculator so far have been focused on determining when a specific 
@@ -279,7 +279,7 @@ const rows = [
             by adapting the previous expressions with new variables.
         </p>
 
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Cost Inputs"> Cost Inputs </h3>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Cost Inputs"> Cost Inputs </h3>
         <p class="text-gray=900 text-justify my-4">
             For speed comparisons, the tool evaluates quantum and classical hardware by comparing their runtimes, 
             factoring in a hardware slowdown. For cost comparisons, the tool assesses the total computational 
@@ -311,7 +311,7 @@ const rows = [
             cost improvement rate.
         </p>
 
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Cost Calculations"> Cost Calculations </h3>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Cost Calculations"> Cost Calculations </h3>
         <p class="text-gray=900 text-justify my-4">
             The minimum problem size at which quantum computation becomes cheaper can be determined using 
             the following expression:
@@ -337,8 +337,8 @@ const rows = [
     
 
 
-        <!-- <h2 class="text-2xl font-bold text-gray-800" id="Graphs"> Graphs </h2>
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Minimum Problem Size for Quantum Algorithmic Advantage"> Minimum Problem Size for Quantum Algorithmic Advantage </h3>
+        <!-- <h2 class="text-2xl font-bold text-[#1f2937]" id="Graphs"> Graphs </h2>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Minimum Problem Size for Quantum Algorithmic Advantage"> Minimum Problem Size for Quantum Algorithmic Advantage </h3>
         <p class="text-gray=900 text-justify my-4"> This graph plots both the classical and quantum runtimes with
             problem size on the x-axis and classical time steps on the y-axis. It's purpose is to visualize the minimum
             problem size such that the quantum algorithm (including the penalty and hardware slowdown) would take less
@@ -352,7 +352,7 @@ const rows = [
 
             <span v-html="katex.renderToString('C(n) = Q(n) * \\text{Penalty}(n) * \\text{hws}')"></span>
         </p>
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Economic Advantage of Quantum Computing"> Economic Advantage of Quantum Computing </h3>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Economic Advantage of Quantum Computing"> Economic Advantage of Quantum Computing </h3>
         <p class="text-gray=900 text-justify my-4"> This graph answers perhaps the most important information in the
             framework: when will the problem become economically advantageous to run on quantum hardware? The x- and
             y-axes are time (in years) and problem size respectively. The two lines plotted are called the feasibility
@@ -400,7 +400,7 @@ const rows = [
                 v-html="katex.renderToString(' n \\text{ }|\\text{ } (C(n) = Q(n) * \\text{Penalty}(n) * \\text{hws} * (1 - \\frac{qir}{100})^{t-2024}) = \\text{QPS}(\\frac{R(t)}{PLQR * (1 - \\frac{rir}{100})^{t - 2024}})')"></span>
         </p>
 
-        <h3 class="text-xl font-bold text-gray-800 mt-8" id="Logical Qubit Quantum Economic Advantage"> Logical Qubit Quantum Economic Advantage </h3>
+        <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Logical Qubit Quantum Economic Advantage"> Logical Qubit Quantum Economic Advantage </h3>
         <p class="text-gray=900 text-justify my-4"> This graph provides practically the same information as the previous
             one except in terms of different units. Whereas the previous graph plotted problem size over time, this one
             graphs logical qubits over time. The year marking the start of quantum economic advantage will remain

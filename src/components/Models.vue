@@ -664,7 +664,7 @@ watch(() => props.model, (model) => {
                         <span class="text-xs text-gray-600">Show steps / speed</span>
                         <button type="button" @click="showStepLines = !showStepLines" :class="[
                             'w-10 h-5 rounded-full transition-colors duration-200 flex items-center',
-                            showStepLines ? 'bg-[#002D9D]/80' : 'bg-gray-300'
+                            showStepLines ? 'bg-[#a32035]/80' : 'bg-gray-300'
                         ]">
                             <span :class="[
                                 'w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200',
@@ -677,7 +677,7 @@ watch(() => props.model, (model) => {
                         <span class="text-xs text-gray-600">Show cost</span>
                         <button type="button" @click="showCostLines = !showCostLines" :class="[
                             'w-10 h-5 rounded-full transition-colors duration-200 flex items-center',
-                            showCostLines ? 'bg-[#002D9D]/80' : 'bg-gray-300'
+                            showCostLines ? 'bg-[#a32035]/80' : 'bg-gray-300'
                         ]">
                             <span :class="[
                                 'w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200',

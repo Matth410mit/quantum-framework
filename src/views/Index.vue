@@ -48,17 +48,17 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="flex flex-col h-screen w-full ">
-        <div class=" bg-[#002D9D] py-4 px-8">
-            <div class="mx-auto flex flex-wrap justify-between gap-4 items-center">
-                <a href="#" class="flex  gap-2 items-center">
-                    <img src="/quantum-logo.png" class="h-8" alt="">
-                    <h1 class=" text-white text-2xl font-medium">Quantum Economic Advantage Calculator</h1>
+    <div class="flex flex-col h-screen w-full">
+        <div class="sticky top-0 z-[99999] bg-white shadow-[0_2px_5px_0_rgba(0,0,0,0.2)] py-0 px-8" style="height:60px;">
+            <div class="h-full mx-auto flex flex-wrap justify-between gap-4 items-center">
+                <a href="#" class="flex gap-2 items-center">
+                    <img src="/FutureTech logo.png" class="h-8" alt="FutureTech">
+                    <h1 class="text-[#1f2937] text-xl font-medium font-[Ubuntu,Helvetica,sans-serif] hidden sm:block">Quantum Economic Advantage Calculator</h1>
                 </a>
-                <div class="space-x-8">
-                    <a href="#" class="text-white hover:underline">Calculator</a>
-                    <a href="#documentation" class="text-white hover:underline">How does it work?</a>
-                    <a href="#team" class="text-white hover:underline">Team</a>
+                <div class="space-x-6 font-[Open_Sans,sans-serif]">
+                    <a href="#" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Calculator</a>
+                    <a href="#documentation" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">How does it work?</a>
+                    <a href="#team" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Team</a>
                 </div>
             </div>
         </div>
@@ -76,7 +76,7 @@ onMounted(() => {
                     <Models :model="model" />
                 </div>
                 <div class="mx-auto">
-                    <button @click="models.addModel" class="bg-[#002D9D] text-white rounded-lg p-2 m-4">Add
+                    <button @click="models.addModel" class="bg-[#a32035] text-white rounded-lg p-2 m-4 hover:bg-[#8a1a2c] transition-colors duration-200">Add
                         Model</button>
                 </div>
             </div>
@@ -84,21 +84,16 @@ onMounted(() => {
         <div class="flex-1" v-else>
             <component :is="components[currentView]" />
         </div>
-        <div class=" bg-[#002D9D] py-4 px-8 mt-16">
+        <div class="bg-[#f3f4f6] py-4 px-8 mt-16">
             <div class="mx-auto flex flex-col gap-4 items-center">
-                <!-- <div class="flex  gap-2 items-center">
-                    <img src="/quantum-logo.png" class="h-6" alt="">
-                    <h1 class=" text-white text-lg font-medium">Quantum Economic Advantage Calculator</h1>
-                </div> -->
-                <hr class="w-full border-white/30">
+                <hr class="w-full border-[#d1d1d17d]">
 
                 <div class="flex gap-8 items-center justify-center">
-                    <a class="max-w-[350px] w-full" href="https://futuretech.mit.edu" target="_blank"><img  src="/futuretech.svg" alt=""></a>
-                    <a class="max-w-[350px] w-full" href="https://www.accenture.com" target="_blank"><img  src="/Accenture_logo.svg" alt=""></a>
-                    
+                    <a class="max-w-[350px] w-full" href="https://futuretech.mit.edu" target="_blank"><img src="/FutureTech logo.png" alt="MIT FutureTech"></a>
+                    <a class="max-w-[200px] w-full" href="https://www.accenture.com" target="_blank"><img src="/Accenture_logo.svg" alt="Accenture"></a>
                 </div>
-                <hr class="w-full border-white/30">
-                <div class="text-white text-sm py-3 text-center">
+                <hr class="w-full border-[#d1d1d17d]">
+                <div class="text-[#6b7280] text-sm py-3 text-center">
                     <p>© {{ new Date().getFullYear() }} Quantum Economic Advantage Calculator</p>
                 </div>
 
