@@ -186,11 +186,17 @@ const accentureMembers = computed(() => teamMembers.filter(member => member.affi
                 </div>
             </div>
         </div>
-        <div class="mt-12 text-center text-[#6b7280] text-sm">
-            <p>
-                If you have any questions or concerns, feel free to contact
-                <a href="mailto:someone@example.com" class="text-[#a32035] hover:underline">someone@example.com</a>.
-            </p>
+        <!-- Alumni -->
+        <div class="mt-10">
+            <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">Alumni</h2>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-3xl mx-auto">
+                <div v-for="member in alumniMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)]">
+                    <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
+                    <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
+                    <h2 class="text-lg font-semibold text-[#1f2937]">{{ member.name }}</h2>
+                    <p class="text-sm text-[#6b7280]">{{ member.role }}</p>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -211,9 +217,11 @@ const teamMembers = [
     { name: 'Carl Dukatz', image: 'Carl_Dukatz_Profile_Picture 1.jpeg', affiliation: 'Accenture', role: 'Managing Director - Next Gen Compute' },
     { name: 'Kung-Chuan Hsu', image: 'profile_pic_KC.jpg', affiliation: 'Accenture', role: 'Quantum Information Scientist - Next Gen Compute' },
     { name: 'Victoria Hazoglou', image: '/victoria-hazoglou.jpg', affiliation: 'Accenture', role: 'Quantum Information Scientist' },
-    { name: 'Andrew Souza', image: '/650353ea2e6029b3cea2ee24_andrew-lucas-p-500.jpg', affiliation: 'MIT FutureTech', role: 'Former Developer' },
+    { name: 'Ben Olsen', image: '/Ben.png', affiliation: 'MIT FutureTech', role: 'Software Developer' },
+    { name: 'Andrew Souza', image: '/650353ea2e6029b3cea2ee24_andrew-lucas-p-500.jpg', affiliation: 'Alumni', role: 'Former Developer' },
 ];
 
 const mitMembers = computed(() => teamMembers.filter(member => member.affiliation === "MIT FutureTech"));
 const accentureMembers = computed(() => teamMembers.filter(member => member.affiliation === "Accenture"));
+const alumniMembers = computed(() => teamMembers.filter(member => member.affiliation === "Alumni"));
 </script>
