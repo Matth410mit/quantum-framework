@@ -207,10 +207,10 @@ import { computed } from "vue";
 const teamMembers = [
     { name: 'Neil Thompson', image: '/650353e37ba6cf9c37b2db67_neil-thompson.jpg', affiliation: 'MIT FutureTech', role: 'Director of FutureTech' },
     { name: 'Jayson Lynch', image: '/650353e88fadc59390b6639b_jayson-lynch-p-500.jpg', affiliation: 'MIT FutureTech', role: 'Head of Algorithms' },
-    { name: 'Frederick Mejia', image: '/654bb5d93f6840c86a2fea17_headshot - Fred Mejia-p-500.png', affiliation: 'MIT FutureTech', role: 'MEng Student, Developer' },
+    { name: 'Frederick Mejia', image: '/654bb5d93f6840c86a2fea17_headshot - Fred Mejia-p-500.png', affiliation: 'Alumni', role: 'MEng Student, Developer' },
     { name: 'Hans Gundlach', image: '/660c392f18a635bb348acc70_profilemay2023 - Hans Gundlach-p-500.png', affiliation: 'MIT FutureTech', role: 'Researcher' },
-    { name: 'Hrvoje Kukina', image: '/6616978ed50987169fb845b7_hrvoje_picture - Hrvoje Kukina-p-500.jpg', affiliation: 'MIT FutureTech', role: 'PhD Candidate' },
-    { name: 'Eleanor Crane', image: "/eleanor_crane.jpeg", affiliation: 'MIT FutureTech', role: 'Researcher' },
+    { name: 'Hrvoje Kukina', image: '/6616978ed50987169fb845b7_hrvoje_picture - Hrvoje Kukina-p-500.jpg', affiliation: 'Alumni', role: 'PhD Candidate' },
+    { name: 'Eleanor Crane', image: "/eleanor_crane.jpeg", affiliation: 'Alumni', role: 'Researcher' },
     { name: 'Johannes Galatsanos-Dueck', image: '/johannes-galatsanos.png', affiliation: 'MIT FutureTech', role: 'Co-Founder & CEO @ Diffraqtion' },
     { name: 'Matthew Garcia', image: '/matthew-garcia.jpg', affiliation: 'MIT FutureTech', role: 'Student Contributor' },
     { name: 'Prashant P. Shukla', image: 'PrashantShukla.jpg', affiliation: 'Accenture', role: 'Accenture Research Lead - MIT IDE' },

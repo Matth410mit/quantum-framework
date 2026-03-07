@@ -20,7 +20,7 @@ const rows = [
 
 </script>
 <template>
-    <div class="max-w-prose mx-auto mb-16">
+    <div class="mx-[1in] mb-16">
         <p class="text-gray=900 text-justify my-4">The Quantum Economic Advantage Calculator is an extension of the Quantum 
             Tortoise and Classical Hare framework, which defines Quantum Economic Advantage (QEA) as the point where quantum
             hardware can solve a given problem faster than comparably priced classical machines. Users can adjust key 
