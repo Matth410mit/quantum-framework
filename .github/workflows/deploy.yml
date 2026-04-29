@@ -9,15 +9,15 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: "npm"
 
       - name: Deploy
         run: |
-          cd /home/ubuntu/quantum-framework
-          git pull origin main
-          [ -d dist ] && sudo chown -R ubuntu:ubuntu dist
           npm ci
           npm run build
           sudo rsync -av --delete dist/ /var/www/quantum-framework/dist/
