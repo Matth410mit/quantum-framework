@@ -17,6 +17,7 @@ jobs:
         run: |
           cd /home/ubuntu/quantum-framework
           git pull origin main
+          [ -d dist ] && sudo chown -R ubuntu:ubuntu dist
           npm ci
           npm run build
           sudo rsync -av --delete dist/ /var/www/quantum-framework/dist/
