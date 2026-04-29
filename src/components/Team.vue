@@ -159,42 +159,41 @@ const accentureMembers = computed(() => teamMembers.filter(member => member.affi
             The Quantum Economic Advantage Calculator is a joint effort between MIT FutureTech and Accenture.
         </p>
 
-        <div class="grid gap-8 sm:grid-cols-3">
-            <!-- Left: MIT FutureTech (Double Column) -->
-            <div class="sm:col-span-2">
-                <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">MIT FutureTech</h2>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div v-for="member in mitMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)]">
-                        <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
-                        <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
-                        <h2 class="text-lg font-semibold text-[#1f2937]">{{ member.name }}</h2>
-                        <p class="text-sm text-[#6b7280]">{{ member.role }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Accenture (Single Column) -->
-            <div class="border-l border-[#d1d1d17d] pl-6">
-                <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">Accenture</h2>
-                <div class="flex flex-col gap-4">
-                    <div v-for="member in accentureMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)]">
-                        <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
-                        <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
-                        <h2 class="text-lg font-semibold text-[#1f2937]">{{ member.name }}</h2>
-                        <p class="text-sm text-[#6b7280]">{{ member.role }}</p>
-                    </div>
+        <!-- MIT FutureTech Section -->
+        <div class="mb-10">
+            <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">MIT FutureTech</h2>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-for="member in mitMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)] h-full">
+                    <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
+                    <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
+                    <h2 class="text-lg font-semibold text-[#1f2937] text-center">{{ member.name }}</h2>
+                    <p class="text-sm text-[#6b7280] text-center">{{ member.role }}</p>
                 </div>
             </div>
         </div>
-        <!-- Alumni -->
-        <div class="mt-10">
-            <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">Alumni</h2>
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-3xl mx-auto">
-                <div v-for="member in alumniMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)]">
+
+        <!-- Accenture Section -->
+        <div class="mb-10">
+            <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">Accenture</h2>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-for="member in accentureMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)] h-full">
                     <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
                     <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
-                    <h2 class="text-lg font-semibold text-[#1f2937]">{{ member.name }}</h2>
-                    <p class="text-sm text-[#6b7280]">{{ member.role }}</p>
+                    <h2 class="text-lg font-semibold text-[#1f2937] text-center">{{ member.name }}</h2>
+                    <p class="text-sm text-[#6b7280] text-center">{{ member.role }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alumni Section -->
+        <div class="mb-10">
+            <h2 class="text-xl font-semibold text-[#1f2937] mb-4 text-center">Alumni</h2>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-for="member in alumniMembers" :key="member.name" class="flex flex-col items-center bg-[#f9fafb] p-6 rounded-lg shadow-[0_0_2px_1px_rgba(0,0,0,0.2)] h-full">
+                    <img v-if="member.image" :src="member.image" alt="Team member photo" class="w-24 h-24 rounded-full mb-4 object-cover object-top shadow-lg">
+                    <div v-else class="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-lg"></div>
+                    <h2 class="text-lg font-semibold text-[#1f2937] text-center">{{ member.name }}</h2>
+                    <p class="text-sm text-[#6b7280] text-center">{{ member.role }}</p>
                 </div>
             </div>
         </div>

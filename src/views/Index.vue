@@ -49,21 +49,20 @@ onMounted(() => {
 
 <template>
     <div class="flex flex-col h-screen w-full">
-        <div class="sticky top-0 z-[99999] bg-white shadow-[0_2px_5px_0_rgba(0,0,0,0.2)] py-4 px-8" style="min-height:120px;">
-            <div class="h-full mx-auto flex flex-wrap justify-between gap-4 items-center">
-                <a href="#" class="flex gap-2 items-center">
-                    <img src="/FutureTech logo.png" class="h-10" alt="FutureTech">
-                    <h1 class="text-[#1f2937] text-xl font-medium font-[Ubuntu,Helvetica,sans-serif] hidden sm:block">Quantum Economic Advantage Calculator</h1>
+        <div class="sticky top-0 z-[99999] bg-white shadow-[0_2px_5px_0_rgba(0,0,0,0.2)]" style="height: 60px;">
+            <div class="max-w-7xl mx-auto pl-0 pr-2 header-container">
+                <a href="https://futuretech.mit.edu" target="_blank" class="brand w-nav-brand" aria-label="home">
+                    <img src="/FutureTech logo.png" loading="lazy" alt="FutureTech" class="image">
                 </a>
-                <div class="space-x-6 font-[Open_Sans,sans-serif]">
-                    <a href="#" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Calculator</a>
-                    <a href="#documentation" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">How does it work?</a>
-                    <a href="#team" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Team</a>
-                </div>
+                <nav role="navigation" class="nav-menu w-nav-menu">
+                    <a href="#" class="nav-link w-nav-link">Calculator</a>
+                    <a href="#documentation" class="nav-link w-nav-link">How does it work?</a>
+                    <a href="#team" class="nav-link w-nav-link">Team</a>
+                </nav>
             </div>
         </div>
         <div class="flex-1" v-if="currentView === views.index">
-            <p class="max-w-7xl mx-auto px-2 text-gray=900 text-lg text-justify my-4"> The Quantum Economic Advantage
+            <p class="max-w-7xl mx-auto pl-0 pr-2 text-gray=900 text-lg text-justify my-4"> The Quantum Economic Advantage
                 Calculator is designed to allow users to explore different
                 combinations of algorithmic problems and quantum hardware. Users can freely deviate from known
                 projections
@@ -145,5 +144,54 @@ onMounted(() => {
     display: flex;
     flex-direction: row;
     justify-content: center;
+}
+
+.header-container {
+    display: flex;
+    height: 60px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    margin-left: -12px;
+}
+
+.brand .image {
+    height: 40px;
+    width: auto;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.nav-link {
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    color: #1f2937;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #a32035;
+}
+
+@media (max-width: 767px) {
+    .nav-menu {
+        gap: 16px;
+    }
+    
+    .nav-link {
+        font-size: 13px;
+    }
 }
 </style>
