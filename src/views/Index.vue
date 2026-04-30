@@ -56,7 +56,7 @@ onMounted(() => {
                 </a>
                 <nav role="navigation" class="nav-menu w-nav-menu">
                     <a href="#" class="nav-link w-nav-link">Calculator</a>
-                    <a href="#documentation" class="nav-link w-nav-link">How does it work?</a>
+                    <a href="#documentation" class="nav-link w-nav-link">How does it work</a>
                     <a href="#team" class="nav-link w-nav-link">Team</a>
                 </nav>
             </div>
