@@ -7,7 +7,7 @@ set -euo pipefail
 # CONFIGURATION
 
 # actual repo path
-PROJECT_DIR="/Users/matth410/Documents/quantum-framework"
+PROJECT_DIR="/Users/matth410/quantum-framework"
 
 # The Node script to run
 SYNC_SCRIPT="src/store/syncAlgorithms.js"

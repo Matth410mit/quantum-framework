@@ -47,6 +47,7 @@
                             <tr class="text-gray-700">
                                 <th class="border border-slate-200 p-1">Year</th>
                                 <th class="border border-slate-200 p-1"># of {{ roadmapUnit}} qubits</th>
+                                <th class="border border-slate-200 p-1">Type</th>
                                 <th class="border border-slate-200 p-1"></th>
                             </tr>
                         </thead>
@@ -57,6 +58,12 @@
                                 </td>
                                 <td class="border border-slate-200 p-1">
                                     <input class="p-0.5 ring-1 ring-slate-200 " type="number" v-model="roadmap.qubits" />
+                                </td>
+                                <td class="border border-slate-200 p-1">
+                                    <select class="p-0.5 ring-1 ring-slate-200 text-xs" v-model="roadmap.type">
+                                        <option value="projected">Projected</option>
+                                        <option value="demonstrated">Demonstrated</option>
+                                    </select>
                                 </td>
                                 <td class="border border-slate-200 p-1">
                                     <button class="text-sm text-red-900 hover:text-red-500 transition-all"
@@ -71,7 +78,7 @@
                             </tr>
                         </tbody>
                     </table>
-                    <button @click="roadmapData.push({ year: '', qubits: '' })"
+                    <button @click="roadmapData.push({ year: '', qubits: '', type: 'projected' })"
                         class="m-2 mx-auto bg-blue-900 flex text-xs items-center hover:bg-blue-500 text-white transition-all rounded-full p-1 px-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                             stroke="currentColor" class="w-4 h-4">
@@ -79,10 +86,27 @@
                         </svg> Add
 
                     </button>
+                    
+                    <div class="mt-4 pt-4 border-t border-slate-200 w-full">
+                        <label class="text-xs text-gray-600 block mb-2">Import / Export</label>
+                        <RoadmapImportExport :currentRoadmaps="currentRoadmaps" @import-success="e => emit('import-success', e)" />
+                    </div>
                 </div>
                 <div class="flex-1">
-                    <QubitsRoadmap :data="dataToGraph" 
+                    <div class="flex gap-4 text-xs justify-center mb-3">
+                        <div class="flex items-center gap-1.5 text-gray-700">
+                            <div class="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
+                            <span>Physical Qubits (Solid)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-gray-700">
+                            <div class="w-0 h-0 border-l-[5px] border-r-[5px] border-b-[8px] border-l-transparent border-r-transparent border-b-blue-600"></div>
+                            <span>Logical Qubits (Dashed)</span>
+                        </div>
+                    </div>
+                    <QubitsRoadmap :data="dataToGraph"
                     :extrapolationType="extrapolationType"
+                    :dataPointTypes="dataPointTypesMap"
+                    :roadmapUnit="roadmapUnit"
                     />
                 </div>
 
@@ -98,6 +122,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import QubitsRoadmap from './QubitsRoadmap.vue';
 import ReferenceDialog from './ReferenceDialog.vue';
 import HardwareReferences from './HardwareReferences.vue';
+import RoadmapImportExport from './RoadmapImportExport.vue';
 
 const dialog = ref(null);
 const roadmapData = ref(null);
@@ -106,15 +131,20 @@ const props = defineProps({
     roadmap: Object,
     extrapolationType: String,
     roadmapUnit: String,
-    physicalLogicalQubitsRatio: Number
+    physicalLogicalQubitsRatio: Number,
+    currentRoadmaps: Array
 });
 
 const dataToGraph = ref([])
+const dataPointTypesMap = ref({})
 const extrapolationType = ref(props.extrapolationType);
 const roadmapUnit = ref(props.roadmapUnit);
 
 watch(roadmapData, (newVal) => {
-    dataToGraph.value = Object.fromEntries(newVal.filter(roadmap => roadmap.year && roadmap.qubits).map(roadmap => ([Number(roadmap.year), roadmap.qubits])))
+    const valid = newVal.filter(roadmap => roadmap.year && roadmap.qubits);
+    dataToGraph.value = Object.fromEntries(valid.map(roadmap => ([Number(roadmap.year), roadmap.qubits])))
+    // Build year → type map for the chart
+    dataPointTypesMap.value = Object.fromEntries(valid.map(roadmap => ([Number(roadmap.year), roadmap.type || 'projected'])))
 }, { deep: true })
 
 function reset() {
@@ -123,7 +153,8 @@ function reset() {
     roadmapData.value = Object.entries(props.roadmap).map(([key, value]) => {
         return {
             year: key,
-            qubits: value 
+            qubits: value,
+            type: 'projected'
         }
     });
 }
@@ -162,6 +193,6 @@ function cancel() {
     dialog.value.closeModal();
 }
 
-const emit = defineEmits(['updateRoadmap'])
+const emit = defineEmits(['updateRoadmap', 'import-success'])
 
 </script>

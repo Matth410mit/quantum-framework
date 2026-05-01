@@ -16,6 +16,7 @@ import ProblemRuntimeAdvanced from './ProblemRuntimeAdvanced.vue';
 import * as math from 'mathjs';
 import * as utils from '../store/utils';
 import { algorithmVariants, getBestAlgorithm, getAvailableAlgorithms } from '../store/algorithmVariants';
+import { dataPointsToLegacyRoadmap, legacyRoadmapToDataPoints } from '../store/roadmapSchema.js';
 
 
 const models = useModelsStore();
@@ -758,7 +759,9 @@ const editRoadmapRef = ref(null);
                         <EditRoadmap :name="model.hardwareName" :roadmap="model.roadmap"
                             :extrapolationType="model.extrapolationType" @updateRoadmap="updateRoadmap"
                             :roadmapUnit="model.roadmapUnit"
-                            :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio" v-slot="{ openModal }">
+                            :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio"
+                            :currentRoadmaps="currentRoadmapsToExport" @import-success="handleImportSuccess"
+                            v-slot="{ openModal }">
                             <button
                                 class="rounded-md bg-gray-500 text-xs   p-0.5 px-2  text-white hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
                                 @click="openModal">
@@ -793,6 +796,7 @@ const editRoadmapRef = ref(null);
                                         :extrapolationType="model.extrapolationType" @updateRoadmap="updateRoadmap"
                                         :roadmapUnit="model.roadmapUnit"
                                         :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio"
+                                        :currentRoadmaps="currentRoadmapsToExport" @import-success="handleImportSuccess"
                                         v-slot="{ openModal }">
                                         <button
                                             class="hover:underline text-xs text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -807,7 +811,8 @@ const editRoadmapRef = ref(null);
 
                     <EditRoadmap ref="editRoadmapRef" :name="model.hardwareName" :roadmap="model.roadmap"
                         :extrapolationType="model.extrapolationType" @updateRoadmap="updateRoadmap"
-                        :roadmapUnit="model.roadmapUnit" :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio">
+                        :roadmapUnit="model.roadmapUnit" :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio"
+                        :currentRoadmaps="currentRoadmapsToExport" @import-success="handleImportSuccess">
                     </EditRoadmap>
                 </div>
 

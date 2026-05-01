@@ -9,7 +9,16 @@ const currentYear = new Date().getFullYear();
 
 const props = defineProps({
     data: Object,
-    extrapolationType: String
+    extrapolationType: String,
+    // Maps year (number) → "demonstrated" | "projected". If not provided, all user-entered points are treated as roadmap points.
+    dataPointTypes: {
+        type: Object,
+        default: () => ({})
+    },
+    roadmapUnit: {
+        type: String,
+        default: 'physical'
+    }
 });
 
 const physicalQubits = ref(Array.from({
@@ -18,6 +27,120 @@ const physicalQubits = ref(Array.from({
     i + currentYear,
     utils.getPhysicalQubits(i + currentYear, props.data, props.extrapolationType)
 ]))
+
+function buildSeries() {
+    const allPoints = physicalQubits.value;
+    const hasTypes = Object.keys(props.dataPointTypes).length > 0;
+
+    // Points that exist in the user's roadmap data
+    const userPoints = allPoints.filter(([year]) => props.data.hasOwnProperty(year));
+    // Points computed by interpolation/extrapolation (not in original data)
+    const extrapolatedPoints = allPoints.filter(([year]) => !props.data.hasOwnProperty(year));
+
+    // Split user points into demonstrated (historical) and projected
+    let demonstratedPoints, projectedPoints;
+    if (hasTypes) {
+        demonstratedPoints = userPoints.filter(([year]) => props.dataPointTypes[year] === 'demonstrated');
+        projectedPoints = userPoints.filter(([year]) => props.dataPointTypes[year] !== 'demonstrated');
+    } else {
+        // Fallback: all user points are "roadmap" (solid blue) like the original behavior
+        demonstratedPoints = userPoints;
+        projectedPoints = [];
+    }
+
+    const symbol = props.roadmapUnit === 'logical' ? 'triangle' : 'circle';
+    const lineDashStyle = props.roadmapUnit === 'logical' ? 'Dash' : 'Solid';
+
+    return [
+        // Background trend line
+        {
+            data: allPoints,
+            type: 'line',
+            color: '#a3203555',
+            dashStyle: lineDashStyle,
+            enableMouseTracking: false,
+            showInLegend: false,
+        },
+        // Demonstrated (historical) — solid filled blue circles
+        {
+            name: 'Demonstrated',
+            data: demonstratedPoints,
+            type: 'scatter',
+            color: 'blue',
+            marker: {
+                symbol: symbol,
+                fillColor: 'blue',
+                lineWidth: 2,
+                lineColor: 'blue',
+            },
+            dataLabels: {
+                enabled: true,
+                useHTML: true,
+                formatter: function () {
+                    return utils.toBase10HTML(this.y);
+                },
+                style: {
+                    fontSize: '9px',
+                    color: 'blue',
+                    fontWeight: 'light',
+                    textOutline: false
+                }
+            }
+        },
+        // Projected — hollow blue circles (outline only)
+        {
+            name: 'Projected',
+            data: projectedPoints,
+            type: 'scatter',
+            color: 'blue',
+            marker: {
+                symbol: symbol,
+                fillColor: 'white',
+                lineWidth: 2,
+                lineColor: 'blue',
+            },
+            dataLabels: {
+                enabled: true,
+                useHTML: true,
+                formatter: function () {
+                    return utils.toBase10HTML(this.y);
+                },
+                style: {
+                    fontSize: '9px',
+                    color: 'blue',
+                    fontWeight: 'light',
+                    textOutline: false
+                }
+            }
+        },
+        // Extrapolated — hollow red circles
+        {
+            name: 'Extrapolated',
+            data: extrapolatedPoints,
+            type: 'scatter',
+            color: 'red',
+            marker: {
+                symbol: symbol,
+                fillColor: 'white',
+                lineWidth: 2,
+                lineColor: 'red',
+            },
+            dataLabels: {
+                enabled: true,
+                useHTML: true,
+                formatter: function () {
+                    return utils.toBase10HTML(this.y);
+                },
+                style: {
+                    fontSize: '9px',
+                    color: 'red',
+                    fontWeight: 'light',
+                    textOutline: false
+                }
+            }
+        },
+    ];
+}
 
 const chartOptions = {
     chart: {
@@ -73,68 +196,13 @@ const chartOptions = {
 
 
     },
-    series: [
-        {
-            data: physicalQubits.value,
-            type: 'line',
-            color: '#a3203555',
-            enableMouseTracking: false,
-            // hide on legend 
-            showInLegend: false,
-        },
-        {
-            name: 'Roadmap',
-            // if value is not a key in the roadmap, then it is a linear interpolation
-            data: physicalQubits.value.filter(([year, qubits]) => props.data.hasOwnProperty(year)),
-            type: 'scatter',
-            color: 'blue',
-            marker: {
-                symbol: 'circle'
-            },
-            dataLabels: {
-                enabled: true,
-                useHTML: true,
-                formatter: function () {
-                    return utils.toBase10HTML(this.y);
-                },
-                style: {
-                    fontSize: '9px',
-                    color: 'blue',
-                    fontWeight: 'light',
-                    textOutline: false
-                }
-            }
-        },
-        {
-            name: 'Extrapolated',
-            data: physicalQubits.value.filter(([year, qubits]) => !props.data.hasOwnProperty(year)),
-            type: 'scatter',
-            color: 'red',
-            marker: {
-                symbol: 'circle'
-            },
-            dataLabels: {
-                enabled: true,
-                useHTML: true,
-                formatter: function () {
-                    return utils.toBase10HTML(this.y);
-                },
-                style: {
-                    fontSize: '9px',
-                    color: 'red',
-                    fontWeight: 'light',
-                    textOutline: false
-                }
-            }
-        },
-
-    ],
+    series: buildSeries(),
 
 }
 
 const key = ref(0);
 
-watch(() => [props.data, props.extrapolationType],
+watch(() => [props.data, props.extrapolationType, props.dataPointTypes, props.roadmapUnit],
     () => {
 
         physicalQubits.value = Array.from({
@@ -143,13 +211,11 @@ watch(() => [props.data, props.extrapolationType],
             i + currentYear,
             utils.getPhysicalQubits(i + currentYear, props.data, props.extrapolationType)
         ])
-        chartOptions.series[0].data = physicalQubits.value;
-        chartOptions.series[1].data = physicalQubits.value.filter(([year, qubits]) => props.data.hasOwnProperty(year));
-        chartOptions.series[2].data = physicalQubits.value.filter(([year, qubits]) => !props.data.hasOwnProperty(year));
+
+        const newSeries = buildSeries();
+        chartOptions.series = newSeries;
         key.value += 1;
 
-        // console.log(regressionMap)
-        // console.log(regressionMap.size)
     }, { deep: true });
 
 
