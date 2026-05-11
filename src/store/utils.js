@@ -37,7 +37,6 @@ export function normalizeQExpr(expr = "") {
     return classifyQubitMapping(expr) !== "custom";
   }
   
-  /** Replace every free occurrence of a variable name with a replacement expression. */
   export function replaceVariable(srcExpression, varName, replacementExpr) {
     // Matches `varName` as a symbol (not part of a longer name)
     const re = new RegExp(`\\b${varName}\\b`, "g");
@@ -354,7 +353,7 @@ export function problemSizeToQubits(logSize, qubitToProblemSize) {
       qValue = Math.pow(10, rhs);
   
     } else {
-      // Unknown form — keep previous behavior (but stable)
+      // Unknown form - keep previous behavior (but stable)
       // Fallback: pretend size == q  =>  log10(q) = logSize
       const log10q = finiteOr(logSize, MIN_LOG10_Q);
       return log10q;
@@ -367,14 +366,9 @@ export function problemSizeToQubits(logSize, qubitToProblemSize) {
     return finiteOr(Math.log10(qValue), MIN_LOG10_Q);
   }  
 
-/**
- * Find the largest problem size (as log10) solvable within a compute-time budget.
- * @param {Function} lqf  – logged quantum runtime: lqf(logN) = log10(runtime(N))
- * @param {Function} lpf  – logged penalty: lpf(logN) = log10(penalty(N))
- * @param {number} maxOpsLog – log10 of the max allowed total operations
- * @param {number} slowdownLog – log10 of the hardware slowdown factor (added to quantum runtime)
- * @returns {number} log10(max_problem_size) that fits within the budget
- */
+// Find the largest problem size (log10) that fits the compute-time budget.
+// lqf, lpf return log10 of the runtime/penalty. maxOpsLog is log10 of the
+// max allowed total ops; slowdownLog is added to the quantum runtime.
 export function findTimeFeasibleProblemSize(lqf, lpf, maxOpsLog, slowdownLog = 0) {
     // Total quantum cost for problem of size 10^logN:
     //   log10(total_ops) = lqf(logN) + lpf(logN) + slowdownLog
@@ -399,8 +393,7 @@ export function percentageToFraction(percentage) {
     return 1 + percentage / 100;
 }
 
-// Flexible qubit→problem size mapping helpers
-// (reuses the top-level `import * as math from 'mathjs'` above)
+// Flexible qubit to problem size mapping helpers
 
 // These are the original dropdown options + brace-less equivalents
 const BUILTIN_QUBIT_MAPPINGS = new Set([
@@ -427,7 +420,7 @@ export function evaluateQubitMapping(
     q,
     {
       allowNonPositive = false,
-      clamp = 1e300   // big enough to show “very large” but still finite
+      clamp = 1e300   // big enough to show "very large" but still finite
     } = {}
   ) {
     const raw = String(expr || "").trim();
@@ -438,7 +431,7 @@ export function evaluateQubitMapping(
       let value;
       switch (norm) {
         case "2^{q}": {
-          // grows fast → cap if needed
+          // grows fast, cap if needed
           const candidate = Math.pow(2, q);
           value = Number.isFinite(candidate) ? candidate : clamp;
           break;
@@ -458,7 +451,7 @@ export function evaluateQubitMapping(
           break;
         }
         case "2^(2^{q})": {
-          // astronomically large by design → always cap
+          // astronomically large by design, always cap
           value = clamp;
           break;
         }

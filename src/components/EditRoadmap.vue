@@ -132,7 +132,11 @@ const props = defineProps({
     extrapolationType: String,
     roadmapUnit: String,
     physicalLogicalQubitsRatio: Number,
-    currentRoadmaps: Array
+    currentRoadmaps: Array,
+    dataPointTypes: {
+        type: Object,
+        default: () => ({})
+    }
 });
 
 const dataToGraph = ref([])
@@ -143,18 +147,19 @@ const roadmapUnit = ref(props.roadmapUnit);
 watch(roadmapData, (newVal) => {
     const valid = newVal.filter(roadmap => roadmap.year && roadmap.qubits);
     dataToGraph.value = Object.fromEntries(valid.map(roadmap => ([Number(roadmap.year), roadmap.qubits])))
-    // Build year → type map for the chart
+    // Build year to type map for the chart
     dataPointTypesMap.value = Object.fromEntries(valid.map(roadmap => ([Number(roadmap.year), roadmap.type || 'projected'])))
 }, { deep: true })
 
 function reset() {
     extrapolationType.value = props.extrapolationType;
     roadmapUnit.value = props.roadmapUnit;
+    const types = props.dataPointTypes || {};
     roadmapData.value = Object.entries(props.roadmap).map(([key, value]) => {
         return {
             year: key,
             qubits: value,
-            type: 'projected'
+            type: types[Number(key)] || types[key] || 'projected'
         }
     });
 }
@@ -173,18 +178,21 @@ function reset() {
    
 
 function save() {
-    const newRoadmap = roadmapData.value.sort((a, b) => a.year - b.year)
-        .reduce((acc, curr) => {
-            if (curr.year && curr.qubits)
-                acc[curr.year] = curr.qubits;
-            return acc;
-        }, {});
-
+    const sorted = roadmapData.value.slice().sort((a, b) => a.year - b.year);
+    const newRoadmap = {};
+    const newDataPointTypes = {};
+    for (const curr of sorted) {
+        if (curr.year && curr.qubits) {
+            newRoadmap[curr.year] = curr.qubits;
+            newDataPointTypes[curr.year] = curr.type || 'projected';
+        }
+    }
 
     emit("updateRoadmap", {
         roadmap: newRoadmap,
         extrapolationType: extrapolationType.value,
-        roadmapUnit: roadmapUnit.value
+        roadmapUnit: roadmapUnit.value,
+        dataPointTypes: newDataPointTypes,
     });
     dialog.value.closeModal();
 }

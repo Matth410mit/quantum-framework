@@ -22,6 +22,12 @@ const modelTemplate = {
         // 2029: 22974,
         // 2033: 100000
     },
+    dataPointTypes: {
+        2020: 'demonstrated',
+        2024: 'demonstrated',
+        2025: 'demonstrated',
+        2028: 'projected',
+    },
     roadmapUnit: "physical",
     extrapolationType: 'exponential',
     hardwareSlowdown: 3.78,
@@ -89,6 +95,7 @@ export const useModelsStore = defineStore('models', () => {
         const clone = deepClone(model)
         clone.id = Math.max(...models.value.map(m => m.id)) + 1
         clone.roadmap = JSON.parse(JSON.stringify(model.roadmap))
+        clone.dataPointTypes = JSON.parse(JSON.stringify(model.dataPointTypes || {}))
 
         models.value.push(clone)
         // scroll to bottom

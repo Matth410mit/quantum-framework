@@ -32,6 +32,21 @@ const references = [
 
     },
     {
+        hardwareName: "IBM 2025 (Superconducting)",
+        year: 2025,
+        link: "https://www.ibm.com/quantum/hardware#roadmap",
+    },
+    {
+        hardwareName: "IQM (Superconducting)",
+        year: 2025,
+        link: "https://iqm.tech/technology/roadmap/",
+    },
+    {
+        hardwareName: "Quantinuum (Trapped Ion)",
+        year: 2025,
+        link: "https://www.quantinuum.com/press-releases/quantinuum-unveils-accelerated-roadmap-to-achieve-universal-fault-tolerant-quantum-computing-by-2030",
+    },
+    {
         hardwareName: "IonQ (Trapped Ion)",
         year: 2024,
         link: "https://ionq.com/posts/how-we-achieved-our-2024-performance-target-of-aq-35",

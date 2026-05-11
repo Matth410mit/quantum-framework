@@ -94,7 +94,7 @@ function convertQubits(model, expression) {
     } else if (kind === 'linear') { // n = q   ->  q = n
         replacement = "n";
     } else {
-        // Arbitrary mapping: don’t attempt a symbolic inverse
+        // Arbitrary mapping: don't attempt a symbolic inverse
         return expression;
     }
 
@@ -627,7 +627,7 @@ function getQuantumFeasible(
     const mapped = utils.evaluateQubitMapping(qubitToProblemSize, logicalQubits, { clamp: 1e300 })
 
     if (!mapped.ok) {
-        console.log("Custom qubit→problem mapping could not be evaluated:", mapped.error)
+        console.log("Custom qubit to problem mapping could not be evaluated:", mapped.error)
         return 0
     }
     return mapped.value

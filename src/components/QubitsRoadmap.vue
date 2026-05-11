@@ -10,7 +10,7 @@ const currentYear = new Date().getFullYear();
 const props = defineProps({
     data: Object,
     extrapolationType: String,
-    // Maps year (number) → "demonstrated" | "projected". If not provided, all user-entered points are treated as roadmap points.
+    // Maps year (number) to "demonstrated" or "projected". If not provided, all user-entered points are treated as roadmap points.
     dataPointTypes: {
         type: Object,
         default: () => ({})
@@ -61,7 +61,7 @@ function buildSeries() {
             enableMouseTracking: false,
             showInLegend: false,
         },
-        // Demonstrated (historical) — solid filled blue circles
+        // Demonstrated (historical): solid filled blue circles
         {
             name: 'Demonstrated',
             data: demonstratedPoints,
@@ -87,7 +87,7 @@ function buildSeries() {
                 }
             }
         },
-        // Projected — hollow blue circles (outline only)
+        // Projected: hollow blue circles (outline only)
         {
             name: 'Projected',
             data: projectedPoints,
@@ -113,7 +113,7 @@ function buildSeries() {
                 }
             }
         },
-        // Extrapolated — hollow red circles
+        // Extrapolated: hollow red circles
         {
             name: 'Extrapolated',
             data: extrapolatedPoints,

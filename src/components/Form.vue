@@ -2,6 +2,7 @@
 import Multiselect from 'vue-multiselect'
 import HardwareSlowdownAdvanced from './HardwareSlowdownAdvanced.vue';
 import { useModelsStore } from '../store/models';
+import { useHardwaresStore } from '../store/hardwares';
 import { Switch } from '@headlessui/vue'
 import MappingPreview from './MappingPreview.vue'
 
@@ -20,29 +21,19 @@ import { dataPointsToLegacyRoadmap, legacyRoadmapToDataPoints } from '../store/r
 
 
 const models = useModelsStore();
+const hardwaresStore = useHardwaresStore();
 
 const props = defineProps({
     modelId: Number
 });
 
-/**
- * Order of importance when auto-picking a default algorithm for a problem.
- * Edit this array to change priorities.
- * Earlier entries are more important.
- */
+// Earlier entries are higher priority when picking a default algorithm.
 const ALGO_PRIORITY_ORDER = ['speed', 'span', 'work', 'space']
-
-/**
- * Optional per-problem algorithm variants.
- * Each problem gets at least two variants:
- *  "Minimise runtime (default)" or "Minimise total work"
- */
 
 const selectedClassicalAlgorithm = ref(null);
 
 const selectedQuantumAlgorithm = ref(null);
 
-/** Test whether a formula string can actually be parsed by mathjs */
 function isFormulaValid(formula) {
     if (!formula || typeof formula !== 'string') return false;
     try {
@@ -55,13 +46,11 @@ function isFormulaValid(formula) {
     }
 }
 
-/** Check if an algorithm has valid, parseable runtime and work formulas */
 function hasValidFormulas(algo) {
     if (!algo || !algo.available) return false;
     return isFormulaValid(algo.runtimeFormula) && isFormulaValid(algo.workFormula);
 }
 
-/** available classical algorithms for current problem (only those with valid formulas) */
 const availableClassicalAlgorithms = computed(() => {
     if (!selectedProblem.value) return [];
     const problemVariants = algorithmVariants[selectedProblem.value.problemName];
@@ -69,7 +58,6 @@ const availableClassicalAlgorithms = computed(() => {
     return problemVariants.classical.filter(a => hasValidFormulas(a));
 });
 
-/** available quantum algorithms for current problem (only those with valid formulas) */
 const availableQuantumAlgorithms = computed(() => {
     if (!selectedProblem.value) return [];
     const problemVariants = algorithmVariants[selectedProblem.value.problemName];
@@ -100,13 +88,11 @@ function applyAlgorithmsToModel(classicalAlgo, quantumAlgo, problemDefaults) {
     }
 }
 
-/** Format a raw qubit count as scientific notation HTML */
 function formatQubitCount(value) {
     if (value <= 0) return '0';
     return utils.toBase10HTML(Math.log10(value));
 }
 
-/** Safely render a math expression as KaTeX HTML; returns fallback text on error */
 function safeRenderKaTeX(input) {
     try {
         const expression = math.parse(input).toTex();
@@ -167,234 +153,7 @@ const problems = ref([
 ]);
 
 
-const hardwares = ref([
-    {
-        hardwareName: "IBM (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 264,
-        ratioImprovementRate: -23,
-        roadmap: {
-            2020: 27,
-            // 2022: 127,
-            2024: 133,
-            2025: 156,
-            // 2029: 200,
-            // 2033: 2000,
-            2028: 1092,
-            // 2029: 22974,
-            // 2033: 100000
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 12,
-            cpuGHz: 5,
-            speed: 60,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "https://www.ibm.com/roadmaps/quantum.pdf"
-    },
-    {
-        hardwareName: "Google (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 1000,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2019: 53,
-            // 2023: 100,
-            2024: 105,
-            // 2025: 1000,
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 12,
-            cpuGHz: 5,
-            speed: 60,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "Sycamore (2019), and Willow (2024).",
-    },
-    {
-        hardwareName: "Rigetti (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 1000,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2018: 19,
-            2021: 40,
-            2024: 84,
-            // 2023: 336,
-            // 2025: 1000,
-            // 2027: 4000,
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 12,
-            cpuGHz: 5,
-            speed: 60,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "19Q (2018), Aspen-M non-modular (2021), Ankaa-3 (2024)",
-    },
-
-    {
-        hardwareName: "IonQ (Trapped Ion)",
-        penaltyInput: "1",
-        processors: 5,
-        hardwareSlowdown: 8.48,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 32,
-        // ratioImprovementRate: -10,
-        ratioImprovementRate: -23,
-        roadmap: {
-            2021: 22,
-            // 2022: 25,
-            // 2023: 29,
-            2024: 35,
-            // 2025: 1024,
-            // 2026: 4096,
-            // 2027: 12288,
-            // 2028: 32768,
-            2028: 1024,
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 600000,
-            cpuGHz: 5,
-            speed: 3000000,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "https://ionq.com/blog/how-we-achieved-our-2024-performance-target-of-aq-35",
-    },
-    {
-        hardwareName: "QuEra (Neutral Atom)",
-        penaltyInput: "1",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -23,
-        roadmap: {
-            2023: 256,
-            2025: 3000,
-            2026: 10000,
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 250,
-            cpuGHz: 5,
-            speed: 1250,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "https://www.quera.com/qec",
-    },
-    {
-        hardwareName: "Pasqal (Neutral Atom)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2022: 200,
-            2024: 1000,
-            2026: 10000,
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 250,
-            cpuGHz: 5,
-            speed: 1250,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "https://www.hpcwire.com/2024/03/13/pasqal-issues-roadmap-to-10000-qubits-in-2026-and-fault-tolerance-in-2028/",
-    },
-    {
-        hardwareName: "Infleqtion (Neutral Atom)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 800,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2024: 2,
-            2026: 10,
-            2028: 100,
-        },
-        roadmapUnit: "logical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 250,
-            cpuGHz: 5,
-            speed: 1250,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "https://www.nextbigfuture.com/2024/02/infleqtion-1600-qubit-array-today-and-five-year-roadmap-to-fault-tolerant-quantum-computers.html",
-    },
-    {
-        hardwareName: "Quantum Silicon (Semiconductors)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2018: 1,
-            2021: 6,
-            2024: 100,
-        },
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: {
-            gateTime: 250,
-            cpuGHz: 5,
-            speed: 1250,
-            gateOverhead: 100,
-            algorithmConstant: 1,
-        },
-        reference: "https://www.eetimes.eu/cea-leti-details-silicon-based-quantum-computing-roadmap/",
-    },
-]);
+const hardwares = computed(() => hardwaresStore.all);
 
 
 
@@ -408,10 +167,10 @@ function updateSlowdown(hwSlowdown, advancedSlowdown) {
 const selectedProblem = ref(problems.value.find(p => p.problemName === model.value.problemName));
 const selectedHardware = ref(hardwares.value.find(h => h.hardwareName === model.value.hardwareName));
 
-/** currently selected algorithm (variant) for the chosen problem */
+// currently selected algorithm (variant) for the chosen problem
 const selectedAlgorithm = ref(null);
 
-/** algorithms available for the currently selected problem */
+// algorithms available for the currently selected problem
 const availableAlgorithms = computed(() => {
     if (!selectedProblem.value) return [];
     return problemAlgorithms.value[selectedProblem.value.problemName] || [];
@@ -421,7 +180,7 @@ onMounted(() => {
     model.value = Object.assign({}, models.models.find(m => m.id === props.modelId))
 });
 
-/** pick the “best” algorithm by the ALGO_PRIORITY_ORDER over metrics */
+// pick the "best" algorithm by the ALGO_PRIORITY_ORDER over metrics
 function pickBestAlgorithm(algorithms) {
     if (!algorithms || !algorithms.length) return null;
     return [...algorithms].sort((a, b) => {
@@ -437,7 +196,7 @@ function pickBestAlgorithm(algorithms) {
     })[0];
 }
 
-/** apply an algorithm’s expressions onto the current model */
+// apply an algorithm's expressions onto the current model
 function applyAlgorithmToModel(algorithm) {
     if (!algorithm || !model.value) return;
     model.value.classicalRuntimeInput = algorithm.classicalRuntimeInput;
@@ -453,7 +212,8 @@ watch(() => selectedHardware.value, (hardware) => {
     model.value.hardwareSlowdown = hardware.hardwareSlowdown;
     model.value.physicalLogicalQubitsRatio = hardware.physicalLogicalQubitsRatio;
     model.value.quantumImprovementRate = hardware.quantumImprovementRate;
-    model.value.roadmap = hardware.roadmap;
+    model.value.roadmap = JSON.parse(JSON.stringify(hardware.roadmap));
+    model.value.dataPointTypes = JSON.parse(JSON.stringify(hardware.dataPointTypes || {}));
     model.value.roadmapUnit = hardware.roadmapUnit;
     model.value.extrapolationType = hardware.extrapolationType;
     model.value.ratioImprovementRate = hardware.ratioImprovementRate;
@@ -496,7 +256,7 @@ watch(() => selectedProblem.value, (problem) => {
     model.value.quantumWork = newQuantumWork;
 }, { deep: true });
 
-/** when user manually changes algorithm from the dropdown */
+// when user manually changes algorithm from the dropdown
 watch(() => selectedAlgorithm.value, (algorithm) => {
     if (!algorithm) return;
     applyAlgorithmToModel(algorithm);
@@ -517,6 +277,89 @@ function updateRoadmap(value) {
     model.value.roadmap = value.roadmap;
     model.value.extrapolationType = value.extrapolationType;
     model.value.roadmapUnit = value.roadmapUnit;
+    if (value.dataPointTypes) {
+        model.value.dataPointTypes = value.dataPointTypes;
+    }
+}
+
+function deriveQubitCategory(name) {
+    const match = String(name || '').match(/\(([^)]+)\)/);
+    const known = ['Superconducting', 'Trapped Ion', 'Neutral Atom', 'Semiconductors', 'Photonic', 'Topological'];
+    if (match) {
+        const found = known.find(k => k.toLowerCase() === match[1].trim().toLowerCase());
+        if (found) return found;
+    }
+    return 'Other';
+}
+
+const currentRoadmapsToExport = computed(() => {
+    if (!model.value) return [];
+    const plqr = Number(model.value.physicalLogicalQubitsRatio) || 264;
+    const rate = Number(model.value.ratioImprovementRate) || 0;
+    const unit = model.value.roadmapUnit || 'physical';
+
+    const dataPoints = legacyRoadmapToDataPoints(
+        model.value.roadmap || {},
+        unit,
+        plqr,
+        rate,
+        'projected'
+    ).map(dp => ({
+        ...dp,
+        type: (model.value.dataPointTypes && model.value.dataPointTypes[dp.year]) || dp.type || 'projected'
+    }));
+
+    return [{
+        title: model.value.hardwareName,
+        organization: model.value.hardwareName.split('(')[0].trim() || model.value.hardwareName,
+        qubitCategory: deriveQubitCategory(model.value.hardwareName),
+        roadmapUnit: unit,
+        extrapolationType: model.value.extrapolationType || 'exponential',
+        physicalLogicalQubitsRatio: plqr,
+        ratioImprovementRate: rate,
+        dataPoints,
+        source: selectedHardware.value?.reference || '',
+    }];
+});
+
+function handleImportSuccess(roadmaps) {
+    if (!Array.isArray(roadmaps) || roadmaps.length === 0) return;
+
+    let firstAdded = null;
+    for (const rm of roadmaps) {
+        const unit = rm.roadmapUnit || 'physical';
+        const roadmap = dataPointsToLegacyRoadmap(rm.dataPoints || [], unit);
+        const dataPointTypes = {};
+        for (const dp of (rm.dataPoints || [])) {
+            if (dp.year != null) dataPointTypes[dp.year] = dp.type || 'projected';
+        }
+
+        const m = model.value;
+        const preset = {
+            hardwareName: rm.title || rm.organization || 'Imported Roadmap',
+            penaltyInput: m.penaltyInput,
+            processors: m.processors,
+            hardwareSlowdown: m.hardwareSlowdown,
+            costFactor: m.costFactor,
+            quantumImprovementRate: m.quantumImprovementRate,
+            costImprovementRate: m.costImprovementRate,
+            physicalLogicalQubitsRatio: rm.physicalLogicalQubitsRatio ?? m.physicalLogicalQubitsRatio,
+            ratioImprovementRate: rm.ratioImprovementRate ?? m.ratioImprovementRate,
+            roadmap,
+            dataPointTypes,
+            roadmapUnit: unit,
+            extrapolationType: rm.extrapolationType || m.extrapolationType || 'exponential',
+            advancedSlowdown: m.advancedSlowdown,
+            reference: rm.source || '',
+        };
+
+        const added = hardwaresStore.addImported(preset);
+        if (!firstAdded) firstAdded = added;
+    }
+
+    if (firstAdded) {
+        selectedHardware.value = firstAdded;
+    }
 }
 
 function removeModel() {
@@ -593,16 +436,6 @@ function onAlgorithmChange(type, algorithm) {
         model.value.quantumWork = algorithm.workFormula;
     }
 }
-
-// attempt at only using one editroadmap instance
-const editRoadmapRef = ref(null);
-// const openEditRoadmap = () => {
-//   if (editRoadmapRef.value) {
-//     editRoadmapRef.value.openModal();
-//   }
-// };
-
-
 
 </script>
 
@@ -690,7 +523,7 @@ const editRoadmapRef = ref(null);
                 'max-h-screen pb-8 opacity-100': !editMode,
                 'max-h-0 opacity-0 hidden': editMode
             }">
-            <!-- LEFT HALF: problem, roadmap, penalty, qubits → size -->
+            <!-- LEFT HALF: problem, roadmap, penalty, qubits to size -->
             <div class="lg:grid grid-cols-2 gap-4 lg:w-2/4">
                 <!-- Problem column -->
                 <div>
@@ -760,7 +593,7 @@ const editRoadmapRef = ref(null);
                             :extrapolationType="model.extrapolationType" @updateRoadmap="updateRoadmap"
                             :roadmapUnit="model.roadmapUnit"
                             :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio"
-                            :currentRoadmaps="currentRoadmapsToExport" @import-success="handleImportSuccess"
+                            :currentRoadmaps="currentRoadmapsToExport" :dataPointTypes="model.dataPointTypes" @import-success="handleImportSuccess"
                             v-slot="{ openModal }">
                             <button
                                 class="rounded-md bg-gray-500 text-xs   p-0.5 px-2  text-white hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
@@ -796,7 +629,7 @@ const editRoadmapRef = ref(null);
                                         :extrapolationType="model.extrapolationType" @updateRoadmap="updateRoadmap"
                                         :roadmapUnit="model.roadmapUnit"
                                         :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio"
-                                        :currentRoadmaps="currentRoadmapsToExport" @import-success="handleImportSuccess"
+                                        :currentRoadmaps="currentRoadmapsToExport" :dataPointTypes="model.dataPointTypes" @import-success="handleImportSuccess"
                                         v-slot="{ openModal }">
                                         <button
                                             class="hover:underline text-xs text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -809,11 +642,6 @@ const editRoadmapRef = ref(null);
                         </tbody>
                     </table>
 
-                    <EditRoadmap ref="editRoadmapRef" :name="model.hardwareName" :roadmap="model.roadmap"
-                        :extrapolationType="model.extrapolationType" @updateRoadmap="updateRoadmap"
-                        :roadmapUnit="model.roadmapUnit" :physicalLogicalQubitsRatio="model.physicalLogicalQubitsRatio"
-                        :currentRoadmaps="currentRoadmapsToExport" @import-success="handleImportSuccess">
-                    </EditRoadmap>
                 </div>
 
                 <!-- Connectivity penalty card -->
@@ -828,7 +656,7 @@ const editRoadmapRef = ref(null);
                     </div>
                 </div>
 
-                <!-- Qubits → Problem Size card -->
+                <!-- Qubits to Problem Size card -->
                 <div class="flex flex-col">
                     <label class="font-medium text-sm" for="qubits_to_size">Qubits to Problem Size</label>
                     <p class="text-xs text-gray-600">
