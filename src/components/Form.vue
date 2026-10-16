@@ -16,8 +16,14 @@ import ProblemReferences from './ProblemReferences.vue';
 import ProblemRuntimeAdvanced from './ProblemRuntimeAdvanced.vue';
 import * as math from 'mathjs';
 import * as utils from '../store/utils';
-import { algorithmVariants, getBestAlgorithm, getAvailableAlgorithms } from '../store/algorithmVariants';
-import { dataPointsToLegacyRoadmap, legacyRoadmapToDataPoints } from '../store/roadmapSchema.js';
+import ProblemBrowser from './ProblemBrowser.vue';
+import {
+    findProblem, groupedProblemOptions, hasValidFormulas,
+    getAlgorithmOptions, getDefaultAlgorithm, getHiddenAlgorithmCount,
+    isModifiedFromDefaults,
+} from '../store/problemCatalog';
+import { hardwareToRoadmap, roadmapToQubitSeries } from '../store/roadmapSchema.js';
+import { applyHardwareToModel } from '../store/urlState';
 
 
 const models = useModelsStore();
@@ -27,66 +33,13 @@ const props = defineProps({
     modelId: Number
 });
 
-// Earlier entries are higher priority when picking a default algorithm.
-const ALGO_PRIORITY_ORDER = ['speed', 'span', 'work', 'space']
-
 const selectedClassicalAlgorithm = ref(null);
 
 const selectedQuantumAlgorithm = ref(null);
 
-function isFormulaValid(formula) {
-    if (!formula || typeof formula !== 'string') return false;
-    try {
-        const compiled = math.compile(formula);
-        // Try evaluating with a dummy scope to catch undefined-variable errors
-        compiled.evaluate({ n: 2, p: 1, q: 1 });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function hasValidFormulas(algo) {
-    if (!algo || !algo.available) return false;
-    return isFormulaValid(algo.runtimeFormula) && isFormulaValid(algo.workFormula);
-}
-
-const availableClassicalAlgorithms = computed(() => {
-    if (!selectedProblem.value) return [];
-    const problemVariants = algorithmVariants[selectedProblem.value.problemName];
-    if (!problemVariants) return [];
-    return problemVariants.classical.filter(a => hasValidFormulas(a));
-});
-
-const availableQuantumAlgorithms = computed(() => {
-    if (!selectedProblem.value) return [];
-    const problemVariants = algorithmVariants[selectedProblem.value.problemName];
-    if (!problemVariants) return [];
-    return problemVariants.quantum.filter(a => hasValidFormulas(a));
-});
-
-// Helper function to apply algs, with fallback to hardcoded problem defaults
-function applyAlgorithmsToModel(classicalAlgo, quantumAlgo, problemDefaults) {
-    if (!model.value) return;
-
-    // Apply classical algorithm if it has valid formulas
-    if (hasValidFormulas(classicalAlgo)) {
-        model.value.classicalRuntimeInput = classicalAlgo.runtimeFormula;
-        model.value.classicalWork = classicalAlgo.workFormula;
-    } else if (problemDefaults) {
-        model.value.classicalRuntimeInput = problemDefaults.classicalRuntimeInput;
-        model.value.classicalWork = problemDefaults.classicalWork;
-    }
-
-    // Apply quantum algorithm if it has valid formulas
-    if (hasValidFormulas(quantumAlgo)) {
-        model.value.quantumRuntimeInput = quantumAlgo.runtimeFormula;
-        model.value.quantumWork = quantumAlgo.workFormula;
-    } else if (problemDefaults) {
-        model.value.quantumRuntimeInput = problemDefaults.quantumRuntimeInput;
-        model.value.quantumWork = problemDefaults.quantumWork;
-    }
-}
+// Recommended (best-known) algorithm first, then the rest newest-first.
+const availableClassicalAlgorithms = computed(() => getAlgorithmOptions(selectedProblem.value, 'classical'));
+const availableQuantumAlgorithms = computed(() => getAlgorithmOptions(selectedProblem.value, 'quantum'));
 
 function formatQubitCount(value) {
     if (value <= 0) return '0';
@@ -108,49 +61,34 @@ const qubitSizeOptions = ref([
     "log({q})",
 ]);
 
-const problems = ref([
+// Problem dropdown: "Popular" first (if any are ranked), then grouped by domain.
+// Search matches names, categories and aliases (e.g. "RSA", "Grover", "TSP").
+const problemQuery = ref('');
+const problemOptions = computed(() => groupedProblemOptions(problemQuery.value));
 
-    {
-        problemName: "Integer Factorization",
-        classicalRuntimeInput: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3)) / p",
-        classicalWork: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3))",
-        quantumRuntimeInput: "n^(2) * log(n, e)",
-        quantumWork: "n^(2) * log(n, e) * q",
-        qubitToProblemSize: "{q}",
-    },
-    {
-        problemName: "Database Search",
-        classicalRuntimeInput: "n / p",
-        classicalWork: "n",
-        quantumRuntimeInput: "sqrt(n)",
-        quantumWork: "sqrt(n) * q",
-        qubitToProblemSize: "2^{q}",
-    },
-    {
-        problemName: "Traveling Salesman",
-        classicalRuntimeInput: "n^3 * 2^n / p",
-        classicalWork: "n^3 * 2^n",
-        quantumRuntimeInput: "n * 1.78^n",
-        quantumWork: "n * 1.78^n * q",
-        qubitToProblemSize: "{q}",
-    },
-    {
-        problemName: "Time Dependent Hartree-Fock Approximation (Quantum Chemistry)",
-        classicalRuntimeInput: "n^3",
-        classicalWork: "n^3",
-        quantumRuntimeInput: "n",
-        quantumWork: "n * q",
-        qubitToProblemSize: "{q}",
-    },
-    {
-        problemName: "Full Configuration Interaction (Quantum Chemistry)",
-        classicalRuntimeInput: "(2 * pi * n)^(1/2) * (n / e)^n",
-        classicalWork: "(2 * pi * n)^(1/2) * (n / e)^n",
-        quantumRuntimeInput: "n^5",
-        quantumWork: "n^5 * q",
-        qubitToProblemSize: "{q}",
-    },
-]);
+const hiddenClassicalCount = computed(() => getHiddenAlgorithmCount(selectedProblem.value, 'classical'));
+const hiddenQuantumCount = computed(() => getHiddenAlgorithmCount(selectedProblem.value, 'quantum'));
+
+// The recommended algorithms for the selected problem, with their papers.
+const defaultReferences = computed(() => ['classical', 'quantum']
+    .map(type => ({ type, algo: getDefaultAlgorithm(selectedProblem.value, type) }))
+    .filter(r => r.algo));
+
+const algorithmsModified = computed(() => isModifiedFromDefaults(selectedProblem.value, model.value));
+
+function resetToRecommended() {
+    const classical = getDefaultAlgorithm(selectedProblem.value, 'classical');
+    const quantum = getDefaultAlgorithm(selectedProblem.value, 'quantum');
+    if (classical) onAlgorithmChange('classical', classical);
+    if (quantum) onAlgorithmChange('quantum', quantum);
+}
+
+function problemSubtitle(problem) {
+    const c = getDefaultAlgorithm(problem, 'classical');
+    const q = getDefaultAlgorithm(problem, 'quantum');
+    const label = (a) => a ? (a.year ? `${a.name} (${a.year})` : a.name) : '—';
+    return `${label(c)} vs ${label(q)}`;
+}
 
 
 const hardwares = computed(() => hardwaresStore.all);
@@ -164,102 +102,47 @@ function updateSlowdown(hwSlowdown, advancedSlowdown) {
     model.value.advancedSlowdown = advancedSlowdown;
 }
 
-const selectedProblem = ref(problems.value.find(p => p.problemName === model.value.problemName));
+const selectedProblem = ref(findProblem(model.value.problemName));
 const selectedHardware = ref(hardwares.value.find(h => h.hardwareName === model.value.hardwareName));
 
-// currently selected algorithm (variant) for the chosen problem
-const selectedAlgorithm = ref(null);
-
-// algorithms available for the currently selected problem
-const availableAlgorithms = computed(() => {
-    if (!selectedProblem.value) return [];
-    return problemAlgorithms.value[selectedProblem.value.problemName] || [];
-});
+// Mark the defaults as selected on first load when the model still uses them.
+function matchingAlgorithm(options, runtime, work) {
+    return options.find(a => a.runtimeFormula === runtime && a.workFormula === work) || null;
+}
+selectedClassicalAlgorithm.value = matchingAlgorithm(availableClassicalAlgorithms.value,
+    model.value.classicalRuntimeInput, model.value.classicalWork);
+selectedQuantumAlgorithm.value = matchingAlgorithm(availableQuantumAlgorithms.value,
+    model.value.quantumRuntimeInput, model.value.quantumWork);
 
 onMounted(() => {
     model.value = Object.assign({}, models.models.find(m => m.id === props.modelId))
 });
 
-// pick the "best" algorithm by the ALGO_PRIORITY_ORDER over metrics
-function pickBestAlgorithm(algorithms) {
-    if (!algorithms || !algorithms.length) return null;
-    return [...algorithms].sort((a, b) => {
-        const ma = a.metrics || {};
-        const mb = b.metrics || {};
-        for (const key of ALGO_PRIORITY_ORDER) {
-            const av = ma[key] ?? Infinity;
-            const bv = mb[key] ?? Infinity;
-            if (av < bv) return -1;
-            if (av > bv) return 1;
-        }
-        return 0;
-    })[0];
-}
-
-// apply an algorithm's expressions onto the current model
-function applyAlgorithmToModel(algorithm) {
-    if (!algorithm || !model.value) return;
-    model.value.classicalRuntimeInput = algorithm.classicalRuntimeInput;
-    model.value.classicalWork = algorithm.classicalWork;
-    model.value.quantumRuntimeInput = algorithm.quantumRuntimeInput;
-    model.value.quantumWork = algorithm.quantumWork;
-}
-
 watch(() => selectedHardware.value, (hardware) => {
-    model.value.hardwareName = hardware.hardwareName;
-    model.value.penaltyInput = hardware.penaltyInput;
-    model.value.processors = hardware.processors;
-    model.value.hardwareSlowdown = hardware.hardwareSlowdown;
-    model.value.physicalLogicalQubitsRatio = hardware.physicalLogicalQubitsRatio;
-    model.value.quantumImprovementRate = hardware.quantumImprovementRate;
-    model.value.roadmap = JSON.parse(JSON.stringify(hardware.roadmap));
-    model.value.dataPointTypes = JSON.parse(JSON.stringify(hardware.dataPointTypes || {}));
-    model.value.roadmapUnit = hardware.roadmapUnit;
-    model.value.extrapolationType = hardware.extrapolationType;
-    model.value.ratioImprovementRate = hardware.ratioImprovementRate;
-    model.value.costFactor = hardware.costFactor;
-    model.value.costImprovementRate = hardware.costImprovementRate;
-    model.value.advancedSlowdown = hardware.advancedSlowdown;
+    applyHardwareToModel(model.value, hardware);
 }, { deep: true });
 
 watch(() => selectedProblem.value, (problem) => {
     if (!problem) return;
 
-    const problemVariants = algorithmVariants[problem.problemName];
+    // Always start from the problem's best-known algorithms (catalog defaults).
+    const classical = getDefaultAlgorithm(problem, 'classical');
+    const quantum = getDefaultAlgorithm(problem, 'quantum');
 
-    // Determine best valid algorithms (or null if none exist)
-    let bestClassical = null, bestQuantum = null;
-    if (problemVariants) {
-        const validClassical = problemVariants.classical.filter(a => hasValidFormulas(a));
-        const validQuantum = problemVariants.quantum.filter(a => hasValidFormulas(a));
-        bestClassical = validClassical.length > 0 ? getBestAlgorithm(validClassical) : null;
-        bestQuantum = validQuantum.length > 0 ? getBestAlgorithm(validQuantum) : null;
-    }
-
-    // Resolve formulas: use algorithm variant if valid, otherwise hardcoded default
-    const newClassicalRuntime = bestClassical ? bestClassical.runtimeFormula : problem.classicalRuntimeInput;
-    const newClassicalWork = bestClassical ? bestClassical.workFormula : problem.classicalWork;
-    const newQuantumRuntime = bestQuantum ? bestQuantum.runtimeFormula : problem.quantumRuntimeInput;
-    const newQuantumWork = bestQuantum ? bestQuantum.workFormula : problem.quantumWork;
-
-    // Update algorithm selection refs (won't trigger redundant model writes
-    // since we removed the separate algorithm watchers)
-    selectedClassicalAlgorithm.value = bestClassical;
-    selectedQuantumAlgorithm.value = bestQuantum;
+    selectedClassicalAlgorithm.value = classical;
+    selectedQuantumAlgorithm.value = quantum;
 
     // Batch-apply all model values at once to avoid intermediate states
     model.value.problemName = problem.problemName;
     model.value.qubitToProblemSize = problem.qubitToProblemSize;
-    model.value.classicalRuntimeInput = newClassicalRuntime;
-    model.value.classicalWork = newClassicalWork;
-    model.value.quantumRuntimeInput = newQuantumRuntime;
-    model.value.quantumWork = newQuantumWork;
-}, { deep: true });
-
-// when user manually changes algorithm from the dropdown
-watch(() => selectedAlgorithm.value, (algorithm) => {
-    if (!algorithm) return;
-    applyAlgorithmToModel(algorithm);
+    if (classical) {
+        model.value.classicalRuntimeInput = classical.runtimeFormula;
+        model.value.classicalWork = classical.workFormula;
+    }
+    if (quantum) {
+        model.value.quantumRuntimeInput = quantum.runtimeFormula;
+        model.value.quantumWork = quantum.workFormula;
+    }
 }, { deep: true });
 
 watch(() => model.value, (value) => {
@@ -282,59 +165,41 @@ function updateRoadmap(value) {
     }
 }
 
-function deriveQubitCategory(name) {
-    const match = String(name || '').match(/\(([^)]+)\)/);
-    const known = ['Superconducting', 'Trapped Ion', 'Neutral Atom', 'Semiconductors', 'Photonic', 'Topological'];
-    if (match) {
-        const found = known.find(k => k.toLowerCase() === match[1].trim().toLowerCase());
-        if (found) return found;
-    }
-    return 'Other';
-}
-
+// The roadmap file records what the source reported. The calculator's own
+// assumptions (PLQR, its yearly change, extrapolation) stay in the model and
+// are applied here when a roadmap is loaded, not stored in the file.
 const currentRoadmapsToExport = computed(() => {
     if (!model.value) return [];
-    const plqr = Number(model.value.physicalLogicalQubitsRatio) || 264;
-    const rate = Number(model.value.ratioImprovementRate) || 0;
-    const unit = model.value.roadmapUnit || 'physical';
-
-    const dataPoints = legacyRoadmapToDataPoints(
-        model.value.roadmap || {},
-        unit,
-        plqr,
-        rate,
-        'projected'
-    ).map(dp => ({
-        ...dp,
-        type: (model.value.dataPointTypes && model.value.dataPointTypes[dp.year]) || dp.type || 'projected'
-    }));
-
-    return [{
-        title: model.value.hardwareName,
-        organization: model.value.hardwareName.split('(')[0].trim() || model.value.hardwareName,
-        qubitCategory: deriveQubitCategory(model.value.hardwareName),
-        roadmapUnit: unit,
-        extrapolationType: model.value.extrapolationType || 'exponential',
-        physicalLogicalQubitsRatio: plqr,
-        ratioImprovementRate: rate,
-        dataPoints,
-        source: selectedHardware.value?.reference || '',
-    }];
+    return [hardwareToRoadmap({
+        hardware: selectedHardware.value || { hardwareName: model.value.hardwareName },
+        series: model.value.roadmap || {},
+        roadmapUnit: model.value.roadmapUnit || 'physical',
+        dataPointTypes: model.value.dataPointTypes,
+    })];
 });
 
-function handleImportSuccess(roadmaps) {
+function handleImportSuccess({ roadmaps, settings = [], notes = [] }) {
     if (!Array.isArray(roadmaps) || roadmaps.length === 0) return;
 
     let firstAdded = null;
-    for (const rm of roadmaps) {
-        const unit = rm.roadmapUnit || 'physical';
-        const roadmap = dataPointsToLegacyRoadmap(rm.dataPoints || [], unit);
-        const dataPointTypes = {};
-        for (const dp of (rm.dataPoints || [])) {
-            if (dp.year != null) dataPointTypes[dp.year] = dp.type || 'projected';
+    roadmaps.forEach((rm, i) => {
+        const m = model.value;
+        // Older files carry calculator settings; newer ones use the current model's.
+        const fileSettings = settings[i] || {};
+        const physicalLogicalQubitsRatio = fileSettings.physicalLogicalQubitsRatio ?? m.physicalLogicalQubitsRatio;
+        const ratioImprovementRate = fileSettings.ratioImprovementRate ?? m.ratioImprovementRate;
+
+        const series = roadmapToQubitSeries(rm, {
+            physicalLogicalQubitsRatio: Number(physicalLogicalQubitsRatio),
+            ratioImprovementRate: Number(ratioImprovementRate),
+            baseYear: new Date().getFullYear(),
+        });
+        notes.push(...series.notes);
+        if (Object.keys(series.roadmap).length === 0) {
+            notes.push(`${rm.title}: has no physical or logical qubit counts, so it was not added to the hardware list.`);
+            return;
         }
 
-        const m = model.value;
         const preset = {
             hardwareName: rm.title || rm.organization || 'Imported Roadmap',
             penaltyInput: m.penaltyInput,
@@ -343,19 +208,23 @@ function handleImportSuccess(roadmaps) {
             costFactor: m.costFactor,
             quantumImprovementRate: m.quantumImprovementRate,
             costImprovementRate: m.costImprovementRate,
-            physicalLogicalQubitsRatio: rm.physicalLogicalQubitsRatio ?? m.physicalLogicalQubitsRatio,
-            ratioImprovementRate: rm.ratioImprovementRate ?? m.ratioImprovementRate,
-            roadmap,
-            dataPointTypes,
-            roadmapUnit: unit,
-            extrapolationType: rm.extrapolationType || m.extrapolationType || 'exponential',
+            physicalLogicalQubitsRatio,
+            ratioImprovementRate,
+            roadmap: series.roadmap,
+            dataPointTypes: series.dataPointTypes,
+            roadmapUnit: series.roadmapUnit,
+            extrapolationType: fileSettings.extrapolationType || m.extrapolationType || 'exponential',
             advancedSlowdown: m.advancedSlowdown,
-            reference: rm.source || '',
+            reference: rm.source?.url || rm.source?.citation || '',
+            provenance: rm.provenance,
+            // Kept so a re-export writes back exactly what the file reported.
+            roadmapRecord: rm,
+            importedSeries: series,
         };
 
         const added = hardwaresStore.addImported(preset);
         if (!firstAdded) firstAdded = added;
-    }
+    });
 
     if (firstAdded) {
         selectedHardware.value = firstAdded;
@@ -443,7 +312,9 @@ function onAlgorithmChange(type, algorithm) {
     <div class="" v-if="model">
         <div class="flex justify-between items-center border-b w-full px-8 py-2 bg-slate-100">
             <h2 class="text-xl text-center font-medium">{{ model.id }}. {{ model.problemName }} on {{
-                model.hardwareName }}</h2>
+                model.hardwareName }}
+                <span v-if="algorithmsModified" class="ml-1 align-middle rounded bg-amber-200 px-1 text-xs font-medium text-amber-900"
+                    title="This model uses algorithms other than the recommended ones">Modified</span></h2>
 
             <div class="flex flex-wrap  items-center gap-4">
                 <!-- toogle quantum only -->
@@ -494,8 +365,21 @@ function onAlgorithmChange(type, algorithm) {
                     </ReferenceDialog>
                 </div>
                 <multiselect class="custom-multiselect mt-1" track-by="problemName" label="problemName"
-                    v-model="selectedProblem" :options="problems" :searchable="true" :close-on-select="true"
-                    :allowEmpty="false" :show-labels="false" placeholder="Pick a value" />
+                    v-model="selectedProblem" :options="problemOptions" group-values="problems" group-label="label"
+                    :group-select="false" :searchable="true" :internal-search="false" @search-change="problemQuery = $event"
+                    @close="problemQuery = ''" :close-on-select="true" :allowEmpty="false" :show-labels="false"
+                    placeholder="Search problems">
+                    <template #option="{ option }">
+                        <span v-if="option.$isLabel" class="text-xs font-semibold uppercase tracking-wide">{{ option.$groupLabel }}</span>
+                        <div v-else>
+                            <div>
+                                {{ option.problemName }}
+                            </div>
+                            <div class="text-xs opacity-70">{{ problemSubtitle(option) }}</div>
+                        </div>
+                    </template>
+                    <template #noResult>No matching problems. Try Browse for the full list.</template>
+                </multiselect>
             </div>
 
             <div class="w-full">
@@ -537,6 +421,14 @@ function onAlgorithmChange(type, algorithm) {
                             </ReferenceDialog>
                         </div>
 
+                        <div class="flex items-center gap-2">
+                        <ProblemBrowser :selected="selectedProblem" @select="selectedProblem = $event"
+                            v-slot="{ openModal }">
+                            <button class="rounded-md bg-gray-500 text-xs p-0.5 px-2 text-white hover:bg-gray-600"
+                                @click="openModal">
+                                Browse
+                            </button>
+                        </ProblemBrowser>
                         <!-- Advanced runtime / algorithm modal (only place you can change variant) -->
                         <ProblemRuntimeAdvanced :classicalRuntimeInput="model.classicalRuntimeInput"
                             :quantumRuntimeInput="model.quantumRuntimeInput" :penaltyInput="model.penaltyInput"
@@ -546,19 +438,60 @@ function onAlgorithmChange(type, algorithm) {
                             :availableClassicalAlgorithms="availableClassicalAlgorithms"
                             :availableQuantumAlgorithms="availableQuantumAlgorithms"
                             :selectedClassicalAlgorithm="selectedClassicalAlgorithm"
-                            :selectedQuantumAlgorithm="selectedQuantumAlgorithm" @updateFunctions="updateFunctions"
+                            :selectedQuantumAlgorithm="selectedQuantumAlgorithm"
+                            :hiddenClassicalCount="hiddenClassicalCount" :hiddenQuantumCount="hiddenQuantumCount"
+                            :sizeParameter="selectedProblem?.sizeParameter"
+                            @updateFunctions="updateFunctions"
                             @updateAlgorithmChange="onAlgorithmChange" v-slot="{ openModal }">
                             <button class="rounded-md bg-gray-500 text-xs p-0.5 px-2 text-white hover:bg-gray-600"
                                 @click="openModal">
                                 Algorithm Options
                             </button>
                         </ProblemRuntimeAdvanced>
+                        </div>
                     </div>
 
                     <!-- Problem selector (same UI as before; no algorithm dropdown here) -->
                     <multiselect class="custom-multiselect mt-1" track-by="problemName" label="problemName"
-                        v-model="selectedProblem" :options="problems" :searchable="true" :close-on-select="true"
-                        :show-labels="false" placeholder="Pick a value"></multiselect>
+                        v-model="selectedProblem" :options="problemOptions" group-values="problems" group-label="label"
+                        :group-select="false" :searchable="true" :internal-search="false" @search-change="problemQuery = $event"
+                        @close="problemQuery = ''" :close-on-select="true" :allowEmpty="false" :show-labels="false"
+                        placeholder="Search problems">
+                        <template #option="{ option }">
+                            <span v-if="option.$isLabel" class="text-xs font-semibold uppercase tracking-wide">{{ option.$groupLabel }}</span>
+                            <div v-else>
+                                <div>
+                                    {{ option.problemName }}
+                                </div>
+                                <div class="text-xs opacity-70">{{ problemSubtitle(option) }}</div>
+                            </div>
+                        </template>
+                        <template #noResult>No matching problems. Try Browse for the full list.</template>
+                    </multiselect>
+
+                    <!-- What the problem is, what n means, and the recommended algorithms' papers -->
+                    <div v-if="selectedProblem" class="mt-2 rounded-lg bg-gray-50 p-2 text-xs text-gray-700">
+                        <div v-if="selectedProblem.sizeParameter" class="font-medium">{{ selectedProblem.sizeParameter }}</div>
+                        <p v-if="selectedProblem.description" class="mt-1">{{ selectedProblem.description }}</p>
+                        <ul class="mt-1">
+                            <li v-for="r in defaultReferences" :key="r.type">
+                                <span class="capitalize">{{ r.type }}</span>:
+                                <a v-if="r.algo.reference?.url" :href="r.algo.reference.url" target="_blank"
+                                    rel="noopener" class="text-blue-900 hover:underline"
+                                    :title="r.algo.reference.citation">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></a>
+                                <span v-else :title="r.algo.reference?.citation">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div v-if="algorithmsModified"
+                        class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                        <span><span class="rounded bg-amber-200 px-1 font-medium">Modified</span>
+                            Not the recommended algorithms for this problem.</span>
+                        <button type="button" class="shrink-0 font-medium hover:underline" @click="resetToRecommended">
+                            Reset to recommended
+                        </button>
+                    </div>
 
                     <!-- Classical runtime preview -->
                     <div class="mt-2">

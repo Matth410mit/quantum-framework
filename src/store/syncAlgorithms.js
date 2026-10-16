@@ -252,6 +252,7 @@ function parseSheet1Algos(rows, problemName) {
   const algoNameIdx = 14; // Algorithm Name
   const variantIdx = 4; // Variation
   const runtimeIdx = 28; // Time Complexity
+  const yearIdx = 15; // Year
   const quantumIdx = 50; // Quantum?
 
   for (let i = 1; i < rows.length; i++) {
@@ -267,6 +268,7 @@ function parseSheet1Algos(rows, problemName) {
             variant: (row[variantIdx] || "").trim(),
             runtime,
             work: runtime, // Sequential: work = runtime
+            year: parseYear(row[yearIdx]),
             parallel: false,
             source: "Sheet1",
           });
@@ -318,6 +320,7 @@ function parseQuantumAlgos(rows, problemName) {
   const variantIdx = 4; // Variation
   const runtimeIdx = 27; // Time Complexity
   const workIdx = 29; // Circuit Size / Work
+  const yearIdx = 14; // Year
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -329,6 +332,7 @@ function parseQuantumAlgos(rows, problemName) {
           variant: (row[variantIdx] || "").trim(),
           runtime: (row[runtimeIdx] || "").trim(),
           work: (row[workIdx] || "").trim(),
+          year: parseYear(row[yearIdx]),
           source: "Quantum Algorithms",
         });
       }
@@ -336,6 +340,12 @@ function parseQuantumAlgos(rows, problemName) {
   }
 
   return algorithms;
+}
+
+// Year column -> number, or null when blank or not a year
+function parseYear(value) {
+  const year = parseInt(String(value || "").trim(), 10);
+  return Number.isFinite(year) && year > 0 ? year : null;
 }
 
 // Remove duplicates
@@ -404,6 +414,7 @@ function createVariant(algo, index, algoType) {
     metrics,
     reference: `${algo.source}${algo.variant ? " - " + algo.variant : ""}`,
     parallel: algo.parallel || false,
+    year: algo.year ?? null,
   };
 
   if (algo.approximation) {

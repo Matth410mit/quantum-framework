@@ -2,6 +2,7 @@
 // import Models from '../components/Models.vue';
 import { e } from 'mathjs';
 import { useModelsStore } from '../store/models';
+import { shareLink } from '../store/urlState';
 import { defineAsyncComponent, onMounted, ref } from 'vue';
 
 
@@ -11,6 +12,19 @@ const Documentation = defineAsyncComponent(() => import('../components/Documenta
 const Team = defineAsyncComponent(() => import('../components/Team.vue'));
 
 const models = useModelsStore();
+
+const linkCopied = ref(false);
+async function copyShareLink() {
+    const link = shareLink(models.models);
+    try {
+        await navigator.clipboard.writeText(link);
+    } catch {
+        window.prompt('Copy this link to share the setup:', link);
+        return;
+    }
+    linkCopied.value = true;
+    setTimeout(() => { linkCopied.value = false; }, 2000);
+}
 const currentView = ref('index');
 const views = {
     index: 'index',
@@ -76,9 +90,12 @@ onMounted(() => {
                 <div v-for="(model, modelIndex) in models.models" :key="model.id">
                     <Models :model="model" />
                 </div>
-                <div class="mx-auto">
+                <div class="mx-auto flex items-center">
                     <button @click="models.addModel" class="bg-[#a32035] text-white rounded-lg p-2 m-4 hover:bg-[#8a1a2c] transition-colors duration-200">Add
                         Model</button>
+                    <button @click="copyShareLink" title="Copy a link that opens these problems, algorithms and hardware"
+                        class="rounded-lg p-2 m-4 ring-1 ring-[#a32035] text-[#a32035] hover:bg-red-50 transition-colors duration-200">
+                        {{ linkCopied ? 'Link copied' : 'Copy link to this setup' }}</button>
                 </div>
             </div>
         </div>

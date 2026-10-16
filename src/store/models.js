@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { ref, toRaw, watch } from 'vue'
+import { useHardwaresStore } from './hardwares'
+import { readSetupFromUrl, writeSetupToUrl } from './urlState'
 
 const modelTemplate = {
     id: 1,
@@ -60,12 +62,12 @@ function deepClone(obj) {
 }
 
 export const useModelsStore = defineStore('models', () => {
+    // A shared link (?setup=...) restores its models; otherwise start with one.
     const models = ref(
-        [
-
-            deepClone(modelTemplate)
-        ]
+        readSetupFromUrl(modelTemplate, useHardwaresStore().all) || [deepClone(modelTemplate)]
     )
+
+    watch(models, (value) => writeSetupToUrl(value, modelTemplate), { deep: true })
 
     function addModel() {
         const model = deepClone(modelTemplate)
