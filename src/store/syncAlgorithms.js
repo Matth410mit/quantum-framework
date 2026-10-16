@@ -589,6 +589,7 @@ function generateReport(report, missingFamilies) {
     if (r.quantumDefault) lines.push(`Default quantum: ${r.quantumDefault.name}${r.quantumDefault.year ? ` (${r.quantumDefault.year})` : ""}  `);
     if (!r.problem.handPicked) {
       if (r.variation) lines.push(`Variation compared: ${r.variation}  `);
+      for (const note of r.problem.assumptions || []) lines.push(`Assumption: ${note}  `);
       lines.push(`Classical variations: ${cell(variationSummary(r.classical))}  `, `Quantum variations: ${cell(variationSummary(r.quantum))}`);
     }
     lines.push("", "| | Side | Algorithm | Year | Variation | Sheet text | Code | Formula or reason |", "|---|---|---|---|---|---|---|---|");

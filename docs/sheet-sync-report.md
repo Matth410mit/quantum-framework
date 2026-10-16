@@ -1,6 +1,6 @@
 # Algorithm sheet sync report
 
-Generated 2026-10-16T18:53:42.168Z by `npm run sync` from https://docs.google.com/spreadsheets/d/1c6HTfHQfp7MIg1LFo6_wFOzKLIHA1rzVpDxXIPosRQ0/.
+Generated 2026-10-16T19:03:27.867Z by `npm run sync` from https://docs.google.com/spreadsheets/d/1c6HTfHQfp7MIg1LFo6_wFOzKLIHA1rzVpDxXIPosRQ0/.
 
 Rows marked ✗ are left out of the calculator. Substitution rules are in `src/store/sheetSync/problems.config.js`.
 
@@ -243,6 +243,7 @@ Quantum variations: Subset Sum (10 of 10 usable exact)
 
 ## Graph Coloring
 
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: 3-Graph Coloring (8 of 10 usable exact); 4-Graph Coloring (4 of 4 usable exact); 3-Coloring a Random 3-Colorable Graph (0 of 1 usable exact)  
 Quantum variations: Chromatic Number (2 of 2 usable exact)
 
@@ -284,6 +285,7 @@ Quantum variations: Set Cover (1 of 1 usable exact); Minimum Set-Cover (0 of 1 u
 Default classical: Tomita; Tanaka & Takahashi (2006)  
 Default quantum: Wenmin Han, Shiqi Zheng, Peian Chen, Yukun Wang  
 Variation compared: Enumerating Maximal Cliques, arbitrary graph  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: Enumerating Maximal Cliques, arbitrary graph (7 of 9 usable exact)  
 Quantum variations: Enumerating Maximal Cliques, arbitrary graph (1 of 1 usable exact); k-Clique (0 of 1 usable exact); Exact k-Clique (0 of 1 usable exact); Max-Weight k-Clique (0 of 1 usable exact); Max-Weight Clique (1 of 1 usable exact)
 
@@ -306,6 +308,7 @@ Quantum variations: Enumerating Maximal Cliques, arbitrary graph (1 of 1 usable 
 
 ## Cycle Detection
 
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: Cycle Detection (0 of 2 usable exact); (no variation) (0 of 3 usable exact)  
 Quantum variations: Cycle Detection (1 of 1 usable exact)
 
@@ -323,6 +326,7 @@ Quantum variations: Cycle Detection (1 of 1 usable exact)
 Default classical: Pearce (2016)  
 Default quantum: Beigi & Taghavi (2021)  
 Variation compared: SCCs  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: SCCs (7 of 13 usable exact); Transitive Closure (1 of 1 usable exact)  
 Quantum variations: Strongly Connected Components (1 of 1 usable exact); Connected Components in an undirected graph (1 of 1 usable exact); Transitive Closure of a symmetric Boolean matrix (0 of 1 usable exact)
 
@@ -348,6 +352,7 @@ Quantum variations: Strongly Connected Components (1 of 1 usable exact); Connect
 
 ## Longest Common Subsequence
 
+Assumption: Assumes both strings have length n.  
 Classical variations: LCS (1 of 15 usable exact)  
 Quantum variations: none
 
@@ -371,6 +376,7 @@ Quantum variations: none
 
 ## Longest Common Substring
 
+Assumption: Assumes both strings have length n.  
 Classical variations: none  
 Quantum variations: Longest Common Subsequence (2 of 2 usable exact); Non-repetitive strings (1 of 1 usable exact)
 
@@ -444,6 +450,8 @@ Quantum variations: Huffman Encoding (1 of 2 usable exact)
 Default classical: Brute Force (1975)  
 Default quantum: Chang et al. (2023)  
 Variation compared: Maximum Cut  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
+Assumption: The classical default is brute force, the only exact algorithm in the sheet. Faster exact algorithms exist (Williams 2005, about 1.73ⁿ), so the quantum advantage shown is an upper bound.  
 Classical variations: Maximum Cut (1 of 1 usable exact); Maximum Cut for Planar Graphs (0 of 1 usable exact); Maximum Cut, Approximate (0 of 1 usable exact)  
 Quantum variations: High-girth graphs (0 of 1 usable exact); (no variation) (1 of 1 usable exact)
 
@@ -457,6 +465,7 @@ Quantum variations: High-girth graphs (0 of 1 usable exact); (no variation) (1 o
 
 ## Graph Isomorphism
 
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: Graph Isomorphism, General Graphs (1 of 1 usable exact); Graph Isomorphism, Bounded Number of Vertices of Each Color (1 of 1 usable exact); Isomorphism of strongly regular graphs (1 of 1 usable exact); (no variation) (2 of 3 usable exact); Subgraph Isomorphism (0 of 1 usable exact); Circulant graphs (1 of 1 usable exact); Partial k-trees (0 of 1 usable exact); Hypergraphs isomorphism (0 of 1 usable exact)  
 Quantum variations: none
 
@@ -555,6 +564,7 @@ Quantum variations: All-Pairs LCA in DAGs (1 of 1 usable exact)
 Default classical: Mucha, Sankowski (general) (2004)  
 Default quantum: Kimmel, Witter (2021)  
 Variation compared: General Graph MCM  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: Bipartite Graph MCM (2 of 4 usable exact); Planar Bipartite Graph MCM (1 of 1 usable exact); General Graph MCM (4 of 4 usable exact); Planar Bipartite Graph Perfect Matching (1 of 1 usable exact)  
 Quantum variations: General Graphs MCM (Adjacency List Model) (2 of 2 usable exact); General Graphs MCM (Adjacency Matrix Model) (4 of 4 usable exact); Bipartite Graphs MCM (Adjacency List Model) (3 of 3 usable exact); Bipartite Graphs MCM (Adjacency Matrix Model) (3 of 4 usable exact)
 
@@ -589,6 +599,7 @@ Quantum variations: General Graphs MCM (Adjacency List Model) (2 of 2 usable exa
 Default classical: Prim's algorithm + Fibonacci heaps; Fredman & Tarjan (1987)  
 Default quantum: Dürr, Heiligman, Høyer, Mhalla 2 (2004)  
 Variation compared: Undirected, General MST  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: Undirected, General MST (11 of 13 usable exact)  
 Quantum variations: Undirected, General MST (Adjacency List Model) (1 of 1 usable exact); Undirected, General MST (Adjacency Matrix Model) (1 of 1 usable exact); Undirected, General MST (1 of 1 usable exact); Undirected, General MST (Quantum Walks) (1 of 1 usable exact); Undirect, Verification (1 of 1 usable exact)
 
@@ -618,6 +629,8 @@ Quantum variations: Undirected, General MST (Adjacency List Model) (1 of 1 usabl
 Default classical: Dijkstra's algorithm with list (Whiting & Hillier 1960) (1960)  
 Default quantum: Heiligman 2 (2003)  
 Variation compared: Nonnegative Weights  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
+Assumption: Largest edge cost L = 100 (from the sheet).  
 Classical variations: general weights (2 of 2 usable exact); Nonnegative Weights (5 of 5 usable exact); Nonnegative Integer Weights (3 of 3 usable exact)  
 Quantum variations: General Weights (Adjacency List Model) (1 of 1 usable exact); General Weights (Adjacency Matrix Model) (1 of 1 usable exact); Nonnegative Weights (1 of 1 usable exact); Nonnegative Weights (Adjacency List Model) (2 of 2 usable exact); Nonnegative Weights (Adjacency Matrix Model) (2 of 2 usable exact); Directed Acyclic Graphs (Adjacency List Model) (1 of 1 usable exact); Directed Acyclic Graphs (Adjacency Matrix Model) (1 of 1 usable exact)
 
@@ -648,6 +661,7 @@ Quantum variations: General Weights (Adjacency List Model) (1 of 1 usable exact)
 Default classical: Floyd–Warshall algorithm (1962)  
 Default quantum: Furrow 3 (2006)  
 Variation compared: APSP  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: APSP on Dense Directed Graphs with Arbitrary Weights (2 of 2 usable exact); APSP (1 of 1 usable exact); APSP on Dense Undirected Unweighted Graphs; APSP on Sparse Undirected Unweighted Graphs (1 of 1 usable exact); APSP on Dense Undirected Graphs with Arbitrary Weights; APSP on Sparse Undirected Graphs with Arbitrary Weights (0 of 1 usable exact); APSP on Dense Undirected Graphs with Positive Integer Weights; APSP on Sparse Undirected Graphs with Positive Integer Weights (1 of 1 usable exact); APSP on Geometrically Weighted Graphs (1 of 1 usable exact); APSP on Dense Directed Graphs with Arbitrary Weights; APSP on Dense Undirected Graphs with Arbitrary Weights (1 of 1 usable exact)  
 Quantum variations: APSP (Adjacency List Model) (1 of 1 usable exact); APSP (Adjacency Matrix Model) (1 of 1 usable exact); APSP on Geometrically Weighted Graphs (0 of 1 usable exact); APSP on Sparse Directed Graphs with Arbitrary Weights (1 of 1 usable exact)
 
@@ -671,6 +685,7 @@ Quantum variations: APSP (Adjacency List Model) (1 of 1 usable exact); APSP (Adj
 Default classical: Cheriyan et al. (1990)  
 Default quantum: Apers, Auza, Lee (2024)  
 Variation compared: st-Maximum Flow  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
 Classical variations: (no variation) (6 of 11 usable exact); st-Maximum Flow (5 of 6 usable exact); Integer Maximum Flow (0 of 3 usable exact)  
 Quantum variations: Integer Maximum Flow (0 of 2 usable exact); st-Maximum Flow (2 of 3 usable exact)
 
@@ -707,6 +722,7 @@ Quantum variations: Integer Maximum Flow (0 of 2 usable exact); st-Maximum Flow 
 Default classical: Chan's algorithm (1996)  
 Default quantum: Lanzagorta & Uhlmann (2004)  
 Variation compared: 2-dimensional  
+Assumption: Assumes √n of the points are on the hull (from the sheet).  
 Classical variations: 2-dimensional (6 of 7 usable exact); 2-dimensional; 3-dimensional (2 of 2 usable exact); (no variation) (1 of 1 usable exact)  
 Quantum variations: 2-dimensional Convex Hull (1 of 1 usable exact)
 
@@ -729,6 +745,7 @@ Quantum variations: 2-dimensional Convex Hull (1 of 1 usable exact)
 Default classical: Two-way String-Matching Algorithm (1991)  
 Default quantum: bit-parallelism quantum search (2025)  
 Variation compared: Single String Search  
+Assumption: Assumes the pattern is n/9 characters long (from the sheet).  
 Classical variations: Single String Search (9 of 23 usable exact); Multiple String Search (1 of 3 usable exact); (no variation) (0 of 1 usable exact)  
 Quantum variations: Single String Search (7 of 7 usable exact); n-dimensional pattern matching (0 of 1 usable exact); Multiple String Search (0 of 1 usable exact); Single String Search but assumes unique occurence of string in text (1 of 1 usable exact)
 
@@ -777,6 +794,8 @@ Quantum variations: Single String Search (7 of 7 usable exact); n-dimensional pa
 Default classical: Chen; I. Kanj; and W. Jia. (2006)  
 Default quantum: Wang, Liang, Bao, Wu (2023)  
 Variation compared: The Vertex Cover Problem  
+Assumption: Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.  
+Assumption: Assumes the cover size k equals n, the worst case. This is a placeholder to revisit.  
 Classical variations: The Vertex Cover Problem (9 of 9 usable exact); The Vertex Cover Problem, Degrees Bounded By 3 (1 of 1 usable exact)  
 Quantum variations: The Vertex Cover Problem (1 of 1 usable exact)
 

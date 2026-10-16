@@ -14,11 +14,8 @@
                         Reset to recommended
                     </button>
                 </div>
-                <div v-if="noSpeedup || assumptions.length" class="rounded-lg bg-gray-50 p-2 text-xs text-gray-700">
-                    <p v-if="noSpeedup" class="text-amber-900">
-                        No known quantum speedup: the best quantum algorithm in the sheet grows no slower than the best classical one.
-                    </p>
-                    <p v-for="note in assumptions" :key="note" class="italic">{{ note }}</p>
+                <div v-if="noSpeedup" class="rounded-lg bg-gray-50 p-2 text-xs text-amber-900">
+                    No known quantum speedup: the best quantum algorithm in the sheet grows no slower than the best classical one.
                 </div>
                 <!-- Classical Algorithm Section -->
                 <div class="border rounded-lg p-4 bg-gray-50">
@@ -266,11 +263,7 @@ const props = defineProps({
         type: Number,
         default: null,
     },
-    // notes about the problem (e.g. dense graphs) and whether the sheet shows no speedup
-    assumptions: {
-        type: Array,
-        default: () => [],
-    },
+    // whether the sheet shows no quantum speedup for the problem
     noSpeedup: {
         type: Boolean,
         default: false,

@@ -34,7 +34,8 @@ export const NO_DOMAIN_LABEL = 'Other';
  * sizeParameter: what n means, from the sheet's Parameter definitions (null = hidden).
  * qubitsNeeded: logical qubits needed for an instance of size n, used when the
  *   chosen quantum algorithm doesn't give its own count.
- * assumptions: notes shown with the problem (e.g. dense graphs).
+ * assumptions: the sync's modelling notes (e.g. dense graphs). Kept for the
+ *   sync report and the code; not shown in the UI.
  * noSpeedup: true when the best quantum algorithm grows no slower than the
  *   best classical one.
  * defaults.classical / defaults.quantum: the algorithm the calculator starts
