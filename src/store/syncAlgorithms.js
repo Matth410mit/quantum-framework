@@ -244,7 +244,7 @@ function buildAlgorithm(record, type, problem, index) {
   const year = parseYear(record.year);
   const isParallel = record.source === TABS.parallel || yes(record.parallel);
   const approximate = record.source === TABS.approx || yes(record.approximate);
-  const heuristic = yes(record.heuristic);
+  const heuristic = yes(record.heuristic) || rowMatches(record, problem.heuristics);
 
   const base = {
     key: `${type}-${slug(name)}-${year ?? "na"}-${index}`,
@@ -433,6 +433,13 @@ function sizeDefinition(algorithm, records, problem) {
   return null;
 }
 
+// A row matches a rule when every field the rule names contains its text,
+// e.g. { title: "Quantum Meets Fine-grained" }.
+function rowMatches(record, rules) {
+  return (rules || []).some(rule => Object.entries(rule)
+    .every(([field, text]) => String(record[field] || "").toLowerCase().includes(text.toLowerCase())));
+}
+
 function familyMatches(record, names) {
   return (names || []).some(n => n.trim().toLowerCase() === record.family.toLowerCase());
 }
@@ -473,7 +480,8 @@ export async function main(argv = process.argv.slice(2)) {
       ...records.parallel.filter(r => familyMatches(r, problem.parallel)),
       ...records.approx.filter(r => familyMatches(r, problem.approx)),
     ];
-    const quantumRecords = records.quantum.filter(r => familyMatches(r, problem.quantum));
+    const quantumRecords = records.quantum.filter(r => familyMatches(r, problem.quantum)
+      && (!problem.quantumOnly || rowMatches(r, problem.quantumOnly)));
 
     for (const [tabKey, names] of [["sheet1", problem.sheet1], ["quantum", problem.quantum]]) {
       for (const name of names || []) {
@@ -481,8 +489,9 @@ export async function main(argv = process.argv.slice(2)) {
       }
     }
 
-    const classical = dedupe(classicalRecords.filter(r => r.name || r.time).map((r, i) => buildAlgorithm(r, "classical", problem, i)));
-    const quantum = dedupe(quantumRecords.filter(r => r.name || r.time).map((r, i) => buildAlgorithm(r, "quantum", problem, i)));
+    const kept = r => !rowMatches(r, problem.exclude);
+    const classical = dedupe(classicalRecords.filter(kept).filter(r => r.name || r.time).map((r, i) => buildAlgorithm(r, "classical", problem, i)));
+    const quantum = dedupe(quantumRecords.filter(kept).filter(r => r.name || r.time).map((r, i) => buildAlgorithm(r, "quantum", problem, i)));
 
     const { classicalDefault, quantumDefault, variation } = pickDefaultsByVariation(classical, quantum, problem);
     const usableClassical = classical.filter(a => a.usable);

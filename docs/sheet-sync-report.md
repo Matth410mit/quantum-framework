@@ -1,6 +1,6 @@
 # Algorithm sheet sync report
 
-Generated 2026-10-16T18:19:58.747Z by `npm run sync` from https://docs.google.com/spreadsheets/d/1c6HTfHQfp7MIg1LFo6_wFOzKLIHA1rzVpDxXIPosRQ0/.
+Generated 2026-10-16T18:53:42.168Z by `npm run sync` from https://docs.google.com/spreadsheets/d/1c6HTfHQfp7MIg1LFo6_wFOzKLIHA1rzVpDxXIPosRQ0/.
 
 Rows marked ✗ are left out of the calculator. Substitution rules are in `src/store/sheetSync/problems.config.js`.
 
@@ -16,12 +16,13 @@ Rows marked ✗ are left out of the calculator. Substitution rules are in `src/s
 | Clique | 7 of 9 | 2 of 5 | Included |
 | Cycle Detection | 0 of 5 | 1 of 1 | Left out: no usable exact classical algorithm |
 | Strongly Connected Components | 13 of 14 | 2 of 3 | Included |
-| Longest Common Subsequence | 1 of 15 | 3 of 3 | Included |
+| Longest Common Subsequence | 1 of 15 | 0 of 0 | Left out: no usable exact quantum algorithm |
+| Longest Common Substring | 0 of 0 | 3 of 3 | Left out: no usable exact classical algorithm |
 | Longest Palindromic Substring | 5 of 5 | 2 of 2 | Included |
 | Matrix Chain Multiplication | 6 of 6 | 1 of 2 | Included |
 | Optimal Binary Search Trees | 12 of 12 | 1 of 2 | Left out: no Variation has a usable exact algorithm on both sides |
 | Maximum Cut | 1 of 3 | 1 of 2 | Included |
-| Graph Isomorphism | 6 of 10 | 1 of 1 | Included |
+| Graph Isomorphism | 6 of 10 | 0 of 0 | Left out: no usable exact quantum algorithm |
 | Nearest Neighbor Search | 4 of 4 | 2 of 6 | Included |
 | Sorting | 22 of 25 | 5 of 6 | Included |
 | Lowest Common Ancestor | 0 of 5 | 1 of 1 | Left out: no usable exact classical algorithm |
@@ -32,7 +33,11 @@ Rows marked ✗ are left out of the calculator. Substitution rules are in `src/s
 | Maximum Flow | 11 of 20 | 2 of 5 | Included |
 | Convex Hull | 10 of 10 | 1 of 1 | Included |
 | String Search | 20 of 27 | 8 of 10 | Included |
-| Vertex Cover | 0 of 10 | 1 of 1 | Left out: no usable exact classical algorithm |
+| Vertex Cover | 10 of 10 | 1 of 1 | Included |
+
+## Family names in the config that the sheet doesn't have
+
+- Sheet1: "Longest Common Substring"
 
 ## Integer Factorization
 
@@ -343,11 +348,8 @@ Quantum variations: Strongly Connected Components (1 of 1 usable exact); Connect
 
 ## Longest Common Subsequence
 
-Default classical: Wagner and Fischer (1974)  
-Default quantum: Akmal, Jin (2022)  
-Variation compared: LCS  
 Classical variations: LCS (1 of 15 usable exact)  
-Quantum variations: Longest Common Subsequence (2 of 2 usable exact); Non-repetitive strings (1 of 1 usable exact)
+Quantum variations: none
 
 | | Side | Algorithm | Year | Variation | Sheet text | Code | Formula or reason |
 |---|---|---|---|---|---|---|---|
@@ -366,6 +368,14 @@ Quantum variations: Longest Common Subsequence (2 of 2 usable exact); Non-repeti
 | ✗ | Classical | Nakatsu et al. | 1982 | LCS | `$O(n(m-r))$` | 20 | Uses r (length of the LCS) |
 | ✗ | Classical | Miller and Myers | 1985 | LCS | `$O(n(m-r))$` | 20 | Uses r (length of the LCS) |
 | ✗ | Classical | Wu et al. | 1990 | LCS | `$O(n(m-r))$` | 20 | Uses r (length of the LCS) |
+
+## Longest Common Substring
+
+Classical variations: none  
+Quantum variations: Longest Common Subsequence (2 of 2 usable exact); Non-repetitive strings (1 of 1 usable exact)
+
+| | Side | Algorithm | Year | Variation | Sheet text | Code | Formula or reason |
+|---|---|---|---|---|---|---|---|
 | ✓ | Quantum | Le Gall, Seddighin | 2020 | Longest Common Subsequence | `Õ(n^(5/6))` |  | `n ^ (5 / 6)` |
 | ✓ | Quantum | Akmal, Jin | 2022 | Longest Common Subsequence | `Õ(n^(2/3))` |  | `n ^ (2 / 3)` |
 | ✓ | Quantum | Le Gall, Seddighin | 2020 | Non-repetitive strings | `Õ(n^(3/4))` |  | `n ^ (3 / 4)` |
@@ -447,10 +457,8 @@ Quantum variations: High-girth graphs (0 of 1 usable exact); (no variation) (1 o
 
 ## Graph Isomorphism
 
-Default classical: Babai (2017)  
-Default quantum: Li et al. (2023)  
 Classical variations: Graph Isomorphism, General Graphs (1 of 1 usable exact); Graph Isomorphism, Bounded Number of Vertices of Each Color (1 of 1 usable exact); Isomorphism of strongly regular graphs (1 of 1 usable exact); (no variation) (2 of 3 usable exact); Subgraph Isomorphism (0 of 1 usable exact); Circulant graphs (1 of 1 usable exact); Partial k-trees (0 of 1 usable exact); Hypergraphs isomorphism (0 of 1 usable exact)  
-Quantum variations: (no variation) (1 of 1 usable exact)
+Quantum variations: none
 
 | | Side | Algorithm | Year | Variation | Sheet text | Code | Formula or reason |
 |---|---|---|---|---|---|---|---|
@@ -464,7 +472,6 @@ Quantum variations: (no variation) (1 of 1 usable exact)
 | ✓ | Classical | Muzychuk | 2004 | Circulant graphs | `$O(n^2)$` |  | `n ^ 2 / p` |
 | ✗ | Classical | Bodlaender | 1990 | Partial k-trees | `$O(n^{k+4.5})$` |  | Uses k (graphs which are partial k-trees) |
 | ✗ | Classical | Babai & Codenotti | 2008 | Hypergraphs isomorphism | `$\exp(O(k^2 \sqrt{n}))$` |  | Uses k (rank of hypergraph) |
-| ✓ | Quantum | Li et al. | 2023 |  | `O(N^7)` |  | `n ^ 7` |
 
 ## Nearest Neighbor Search
 
@@ -767,19 +774,22 @@ Quantum variations: Single String Search (7 of 7 usable exact); n-dimensional pa
 
 ## Vertex Cover
 
-Classical variations: The Vertex Cover Problem (0 of 9 usable exact); The Vertex Cover Problem, Degrees Bounded By 3 (0 of 1 usable exact)  
+Default classical: Chen; I. Kanj; and W. Jia. (2006)  
+Default quantum: Wang, Liang, Bao, Wu (2023)  
+Variation compared: The Vertex Cover Problem  
+Classical variations: The Vertex Cover Problem (9 of 9 usable exact); The Vertex Cover Problem, Degrees Bounded By 3 (1 of 1 usable exact)  
 Quantum variations: The Vertex Cover Problem (1 of 1 usable exact)
 
 | | Side | Algorithm | Year | Variation | Sheet text | Code | Formula or reason |
 |---|---|---|---|---|---|---|---|
-| ✗ | Classical | Brute force (backtracking search) | 1940 | The Vertex Cover Problem | `$O(2^k n^{O(1)})$` | 850.09 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Sam Buss | 1993 | The Vertex Cover Problem | `$O(kn + 2^k k^{2k + 2})$` | 940 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Chen; I. Kanj; and W. Jia. | 2001 | The Vertex Cover Problem | `$O(kn + 1.2852^k)$` | 843.5996 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Chandran and F. Grandoni | 2004 | The Vertex Cover Problem | `$O(\min(1.2759^k k^{1.5}, 1.2745^k k^4) + kn)$` | 843.4201 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Chen; I. Kanj; and W. Jia. | 2006 | The Vertex Cover Problem | `$O(1.2738^k+ kn)$` | 843.4 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | J. Chen; L. Liu; and W. Jia. | 2000 | The Vertex Cover Problem, Degrees Bounded By 3 | `$O(k 1.2192^k)$` | 842.8 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Balasubramanian; Fellows | 1996 | The Vertex Cover Problem | `$O(kn + 1.324718^k k^2)$` | 844.0101 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Papadimitriou and M Yannakakis | 1996 | The Vertex Cover Problem | `$O(3^k n)$` | 855.805 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Niedermeier, Rossmanith | 1999 | The Vertex Cover Problem | `$O(kn + 1.29175^k k^2)$` | 843.6101 | Uses k (size of vertex cover (worst case O(n))) |
-| ✗ | Classical | Downey | 1998 | The Vertex Cover Problem | `$O(kn + 1.31951^k k^2)$` | 844.01 | Uses k (size of vertex cover (worst case O(n))) |
+| ✓ | Classical | Brute force (backtracking search) | 1940 | The Vertex Cover Problem | `$O(2^k n^{O(1)})$` | 850.09 | `2 ^ n * n ^ 1 / p` |
+| ✓ | Classical | Sam Buss | 1993 | The Vertex Cover Problem | `$O(kn + 2^k k^{2k + 2})$` | 940 | `(n * n + 2 ^ n * n ^ (2 * n + 2)) / p` |
+| ✓ | Classical | Chen; I. Kanj; and W. Jia. | 2001 | The Vertex Cover Problem | `$O(kn + 1.2852^k)$` | 843.5996 | `(n * n + 1.2852 ^ n) / p` |
+| ✓ | Classical | Chandran and F. Grandoni | 2004 | The Vertex Cover Problem | `$O(\min(1.2759^k k^{1.5}, 1.2745^k k^4) + kn)$` | 843.4201 | `(min(1.2759 ^ n * n ^ 1.5, 1.2745 ^ n * n ^ 4) + n * n) / p` |
+| ✓ | Classical | Chen; I. Kanj; and W. Jia. | 2006 | The Vertex Cover Problem | `$O(1.2738^k+ kn)$` | 843.4 | `(1.2738 ^ n + n * n) / p` |
+| ✓ | Classical | J. Chen; L. Liu; and W. Jia. | 2000 | The Vertex Cover Problem, Degrees Bounded By 3 | `$O(k 1.2192^k)$` | 842.8 | `n * 1.2192 ^ n / p` |
+| ✓ | Classical | Balasubramanian; Fellows | 1996 | The Vertex Cover Problem | `$O(kn + 1.324718^k k^2)$` | 844.0101 | `(n * n + 1.324718 ^ n * n ^ 2) / p` |
+| ✓ | Classical | Papadimitriou and M Yannakakis | 1996 | The Vertex Cover Problem | `$O(3^k n)$` | 855.805 | `3 ^ n * n / p` |
+| ✓ | Classical | Niedermeier, Rossmanith | 1999 | The Vertex Cover Problem | `$O(kn + 1.29175^k k^2)$` | 843.6101 | `(n * n + 1.29175 ^ n * n ^ 2) / p` |
+| ✓ | Classical | Downey | 1998 | The Vertex Cover Problem | `$O(kn + 1.31951^k k^2)$` | 844.01 | `(n * n + 1.31951 ^ n * n ^ 2) / p` |
 | ✓ | Quantum | Wang, Liang, Bao, Wu | 2023 | The Vertex Cover Problem | `O(n^2*2^(n/2))` |  | `n ^ 2 * 2 ^ (n / 2)` |

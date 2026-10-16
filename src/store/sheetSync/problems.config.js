@@ -15,10 +15,23 @@
  *   - Accuracy/conditioning (eps, kappa, sparsity) and solution-size
  *     parameters (k = cover or clique size) are left out.
  *
+ * `exclude` drops sheet rows that don't belong to the problem (matched by
+ * field text, e.g. title). `quantumOnly` keeps only the matching rows of the
+ * quantum families, for a problem that borrows rows filed under another family.
+ * `heuristics` marks rows as heuristics when the sheet doesn't, so they stay
+ * alternatives but can't be a default.
+ *
  * `inputSize` is the number of logical qubits needed just to hold the input,
  * used when the sheet's qubit count leaves the input out (see qubitsNeeded in
  * syncAlgorithms.js).
  */
+
+const LONGEST_COMMON_SUBSTRING_PAPERS = [
+    // These papers solve longest common *substring*, which the Quantum tab
+    // files under Longest Common Subsequence (checked Oct 16).
+    { title: 'Quantum Meets Fine-grained Complexity' },
+    { title: 'Near-Optimal Quantum Algorithms for String Problems' },
+];
 
 const GRAPH_VARS = { n: 'n', V: 'n', N: 'n', m: 'n^2', E: 'n^2' };
 const DENSE = 'Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.';
@@ -63,6 +76,10 @@ export const SHEET_PROBLEMS = [
         vars: GRAPH_VARS,
         inputSize: 'n^2',
         assumptions: [DENSE],
+        // DSatur and Petford & Welsh are heuristics, though the sheet doesn't say
+        // so. Graph Coloring stays out until Sheet1 has an exact row for the
+        // chromatic number, which is what the quantum rows solve.
+        heuristics: [{ name: 'DSatur' }, { name: 'Petford' }],
     },
     {
         problemName: 'Set Cover',
@@ -100,7 +117,19 @@ export const SHEET_PROBLEMS = [
         problemName: 'Longest Common Subsequence',
         sheet1: ['Longest Common Subsequence'],
         quantum: ['Longest Common Subsequence'],
+        exclude: LONGEST_COMMON_SUBSTRING_PAPERS,
         // Two strings of equal length (Sheet1's ratio for sequence problems is n:m = 1:1).
+        vars: { n: 'n', m: 'n' },
+        inputSize: 'n',
+        assumptions: ['Assumes both strings have length n.'],
+    },
+    {
+        // Split from Longest Common Subsequence (Matthew, Oct 16). Sheet1 has
+        // no classical rows for it yet, so it stays out until it does.
+        problemName: 'Longest Common Substring',
+        sheet1: ['Longest Common Substring'],
+        quantum: ['Longest Common Subsequence'],
+        quantumOnly: LONGEST_COMMON_SUBSTRING_PAPERS,
         vars: { n: 'n', m: 'n' },
         inputSize: 'n',
         assumptions: ['Assumes both strings have length n.'],
@@ -132,12 +161,16 @@ export const SHEET_PROBLEMS = [
         quantum: ['Maximum Cut'],
         vars: GRAPH_VARS,
         inputSize: 'n^2',
-        assumptions: [DENSE],
+        assumptions: [DENSE, 'The classical default is brute force, the only exact algorithm in the sheet. Faster exact algorithms exist (Williams 2005, about 1.73ⁿ), so the quantum advantage shown is an upper bound.'],
     },
     {
         problemName: 'Graph Isomorphism',
         sheet1: ['Graph Isomorphism Problem'],
         quantum: ['Graph Isomorphism'],
+        // Li et al. (2023), O(N^7), is a quantum-walk method with no Variation;
+        // it can't be the general problem, so it's left out until its Variation
+        // is known (Matthew, Oct 16).
+        exclude: [{ title: 'Continuous-Time Quantum Walk' }],
         vars: GRAPH_VARS,
         inputSize: 'n^2',
         assumptions: [DENSE],
@@ -232,9 +265,12 @@ export const SHEET_PROBLEMS = [
         problemName: 'Vertex Cover',
         sheet1: ['The Vertex Cover Problem'],
         quantum: ['The Vertex Cover Problem'],
-        vars: GRAPH_VARS,
+        // TEMPORARY (Matthew, Oct 16): k = n, the sheet's own worst case, so
+        // Vertex Cover can be compared at all. This bends the rule that
+        // solution-size parameters are left out; revisit with the advisor.
+        vars: { ...GRAPH_VARS, k: 'n' },
         inputSize: 'n^2',
-        assumptions: [DENSE],
+        assumptions: [DENSE, 'Assumes the cover size k equals n, the worst case. This is a placeholder to revisit.'],
     },
 ];
 
