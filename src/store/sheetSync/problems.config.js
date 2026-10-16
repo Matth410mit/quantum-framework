@@ -24,10 +24,12 @@ const GRAPH_VARS = { n: 'n', V: 'n', N: 'n', m: 'n^2', E: 'n^2' };
 const DENSE = 'Assumes a dense graph (m = n² edges). On sparse graphs the quantum speedup largely disappears.';
 
 export const SHEET_PROBLEMS = [
-    // Problems the calculator already had. Their defaults stay hand-picked in
-    // problemCatalog.js; the sheet only adds alternatives to the pickers.
+    // Problems the calculator already had (handPicked). Their defaults stay
+    // hand-picked in problemCatalog.js; the sheet only adds alternatives to
+    // the pickers, even when the sheet alone couldn't supply both defaults.
     {
         problemName: 'Integer Factorization',
+        handPicked: true,
         sheet1: ['Integer Factoring'],
         parallel: ['Integer Factoring'],
         quantum: ['Integer Factoring', 'Integer factoring'],
@@ -38,6 +40,7 @@ export const SHEET_PROBLEMS = [
     },
     {
         problemName: 'Traveling Salesman',
+        handPicked: true,
         sheet1: ['The Traveling-Salesman Problem'],
         approx: ['The Traveling-Salesman Problem'],
         quantum: ['The Traveling-Salesman Problem'],

@@ -96,6 +96,8 @@ function normalize(raw, assumptions) {
     if (dollars) s = dollars[1];
 
     s = s.replace(/<br\s*\/?>/gi, '\n').split('\n')[0];
+    // "A ~ B" gives the same bound two ways; keep the first
+    s = s.split(/\s~\s/)[0];
     s = s.replace(/^[\s<≤~≈]+/, '').trim();
 
     // O-notation variants
@@ -129,26 +131,33 @@ function normalize(raw, assumptions) {
 
     // log bases: log_2 x, log_{2} x -> lg
     s = s.replace(/log_\(?2\)?/g, 'lg');
-    // log^k(x), log^k x -> (log(x))^k
-    s = s.replace(/\b(log|lg|ln)\s*\^\s*\(?([0-9.]+)\)?\s*\(/g, (_, f, k) => `${f}^${k}(`);
-    s = s.replace(/\b(log|lg|ln)\^([0-9.]+)\(/g, '§$1§$2§(');
-    s = s.replace(/\b(log|lg|ln)\s*\^\s*\(?([0-9.]+)\)?\s*([A-Za-z])\b/g, '(($1($3))^$2)');
-    // log log x
-    s = s.replace(/\b(log|lg|ln)\s*(log|lg|ln)\s*([A-Za-z])\b/g, '$1($2($3))');
-    // log x, logn, ln n
-    s = s.replace(/\b(log|lg|ln)\s*([A-Za-z])\b(?!\s*\()/g, '$1($2)');
-    s = s.replace(/\b(log|lg|ln)([A-Za-z])\b/g, '$1($2)');
-
-    // expand the §log§k§( markers: §log§2§(X) -> (log(X))^2
-    let idx;
-    while ((idx = s.indexOf('§')) !== -1) {
-        const m = s.slice(idx).match(/^§(log|lg|ln)§([0-9.]+)§\(/);
+    // log x, log log x, log^k x, log^k(x) -> calls. Converted right to left, so
+    // an inner log is already a call when the outer one takes it as its
+    // argument. Converted names are marked @log@ until the end.
+    for (let guard = 0; guard < 50; guard++) {
+        const matches = [...s.matchAll(/(log|lg|ln)\s*(?:\^\s*\(?([0-9.]+)\)?)?\s*/g)]
+            .filter(m => !(m.index > 0 && /[A-Za-z@]/.test(s[m.index - 1])));
+        const m = matches.at(-1);
         if (!m) break;
-        const open = idx + m[0].length - 1;
-        const close = matchParen(s, open);
-        if (close === -1) break;
-        s = s.slice(0, idx) + `((${m[1]}${s.slice(open, close + 1)})^${m[2]})` + s.slice(close + 1);
+        const start = m.index, after = m.index + m[0].length;
+        let arg = null, end = after;
+        const call = s.slice(after).match(/^(@(?:log|lg|ln)@|sqrt|exp|min|max)\(/);
+        if (s[after] === '(' || call) {
+            const open = call ? after + call[0].length - 1 : after;
+            const close = matchParen(s, open);
+            if (close === -1) break;
+            arg = call ? s.slice(after, close + 1) : s.slice(open + 1, close);
+            end = close + 1;
+        } else {
+            const word = s.slice(after).match(/^([A-Za-zα-ω]|[0-9.]+)/);
+            if (!word) break;
+            arg = word[1];
+            end = after + word[0].length;
+        }
+        const fn = `@${m[1]}@(${arg})`;
+        s = s.slice(0, start) + (m[2] ? `((${fn})^${m[2]})` : fn) + s.slice(end);
     }
+    s = s.replace(/@(log|lg|ln)@/g, '$1');
 
     // close unbalanced parentheses the sheet left open
     const open = (s.match(/\(/g) || []).length, close = (s.match(/\)/g) || []).length;
@@ -256,6 +265,9 @@ export function convertComplexity(text, opts = {}) {
     // juxtaposition with spaces ("V^2 2^V") -> explicit multiplication
     s = s.replace(/\b(log2?|ln|lg|sqrt|exp|min|max)\s+\(/g, '$1(');
     s = s.replace(/([\w)!.ω])\s+(?=[\w(ω])/g, '$1*');
+    // "n(log n)^2", ")(": a variable or group right before a parenthesis multiplies it
+    s = s.replace(/(^|[^A-Za-z_])([A-Za-zα-ω])\(/g, (all, pre, v) => (v === 'O' || v === 'o' ? all : `${pre}${v}*(`));
+    s = s.replace(/\)\(/g, ')*(');
 
     // ln is the natural log; log and lg are base 2.
     s = s.replace(/\bln\(/g, '__NAT(').replace(/\b(lg|log)\(/g, 'log2(').replace(/__NAT\(/g, 'log(');

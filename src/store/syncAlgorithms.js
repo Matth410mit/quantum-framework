@@ -403,12 +403,18 @@ export async function main(argv = process.argv.slice(2)) {
     const usableClassical = classical.filter(a => a.usable);
     const usableQuantum = quantum.filter(a => a.usable);
 
+    const strip = ({ usable, reason, sheetRow, family, preferredParameter, ...rest }) => ({ ...rest, available: true });
     let status;
-    if (!classicalDefault || !quantumDefault) {
+    if (problem.handPicked) {
+      status = "Included (defaults hand-picked in problemCatalog.js; the sheet adds alternatives)";
+      algorithmVariants[problem.problemName] = {
+        classical: usableClassical.map(strip),
+        quantum: usableQuantum.map(strip),
+      };
+    } else if (!classicalDefault || !quantumDefault) {
       status = `Left out: no usable exact ${!classicalDefault ? "classical" : "quantum"} algorithm`;
     } else {
       status = "Included";
-      const strip = ({ usable, reason, sheetRow, family, preferredParameter, ...rest }) => ({ ...rest, available: true });
       algorithmVariants[problem.problemName] = {
         classical: usableClassical.map(strip),
         quantum: usableQuantum.map(strip),
