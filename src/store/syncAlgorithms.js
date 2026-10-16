@@ -7,7 +7,10 @@
  * are needed.
  *
  * Usage:
- *   npm run sync                       # read the live sheet
+ *   npm run sync                       # read the live sheet (and keep a copy
+ *                                      # in .sheet-cache/)
+ *   npm run sync -- --from .sheet-cache
+ *                                      # re-run on the last copy, offline
  *   node src/store/syncAlgorithms.js --from ./sheet-csv
  *                                      # read Sheet1.csv, Quantum Algorithms.csv,
  *                                      # Parallel Algos.csv, Approx Algos.csv from a folder
@@ -117,6 +120,8 @@ function parseCsv(text) {
   return rows;
 }
 
+const CACHE_DIR = ".sheet-cache";
+
 async function readTab(tab, fromDir) {
   if (fromDir) {
     const file = path.join(fromDir, `${tab}.csv`);
@@ -129,7 +134,11 @@ async function readTab(tab, fromDir) {
   const url = `${SOURCE_URL}gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(tab)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Couldn't read the "${tab}" tab (HTTP ${res.status}). Is the sheet still shared publicly?`);
-  return parseCsv(await res.text());
+  const text = await res.text();
+  // Keep a copy, so the sync can be re-run offline with --from .sheet-cache.
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+  fs.writeFileSync(path.join(CACHE_DIR, `${tab}.csv`), text);
+  return parseCsv(text);
 }
 
 // Rows as objects keyed by the COLUMNS names.
@@ -336,31 +345,67 @@ function pickQuantumDefault(algorithms) {
     || (b.year ?? 0) - (a.year ?? 0))[0] || null;
 }
 
-// Variations are compared by name, ignoring case, spacing and punctuation.
-function variationKey(variation) {
-  return String(variation || "").toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, " ").trim();
+// Variations are compared by name. The two tabs word them differently ("LCS"
+// vs "Longest Common Subsequence", "APSP (Adjacency Matrix Model)" vs "APSP",
+// "2-dimensional" vs "2-dimensional Convex Hull"), so a name is reduced to what
+// sets it apart from the problem itself: parenthesised notes, filler words,
+// plurals and words or acronyms of the problem's own name are dropped. An empty
+// key means the problem in general.
+const VARIATION_FILLER = new Set(["the", "a", "an", "problem", "problems", "general", "graph", "graphs", "on", "of", "with", "for", "in"]);
+const stem = word => word.slice(0, 5);
+const singular = word => (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word);
+const words = text => String(text || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+function problemNameWords(problem) {
+  const names = [problem.problemName, ...["sheet1", "quantum", "parallel", "approx"].flatMap(tab => problem[tab] || [])];
+  const stems = new Set(), acronyms = new Set();
+  for (const name of names) {
+    const list = words(name).filter(w => !VARIATION_FILLER.has(w));
+    list.forEach(w => stems.add(stem(singular(w))));
+    if (list.length > 1) acronyms.add(list.map(w => w[0]).join(""));
+  }
+  return { stems, acronyms };
+}
+
+export function variationKey(variation, problem) {
+  const { stems, acronyms } = problemNameWords(problem);
+  return words(String(variation || "").replace(/\([^)]*\)/g, " "))
+    .map(singular)
+    .filter(w => !VARIATION_FILLER.has(w) && !stems.has(stem(w)) && !acronyms.has(w))
+    .join(" ");
+}
+
+// A cell can list several variations ("2-dimensional; 3-dimensional").
+function variationKeys(algorithm, problem) {
+  const parts = String(algorithm.variation || "").split(/;|\n/);
+  return new Set(parts.map(part => variationKey(part, problem)));
 }
 
 // Defaults are only compared within one Variation, so a problem's two
 // defaults solve the same version of it (e.g. not 3-coloring against general
 // coloring). Among the variations with an eligible algorithm on both sides,
-// the one with the most sheet rows is used.
+// the general problem (an empty key) is used when both sides have it, and
+// otherwise the variation with the most sheet rows. A side that never names a
+// variation (the Quantum tab leaves it blank for Sorting) is taken to cover
+// every variation of the other side.
 function pickDefaultsByVariation(classical, quantum, problem) {
+  const keysOf = new Map([...classical, ...quantum].map(a => [a, variationKeys(a, problem)]));
   const counts = new Map();
-  for (const a of [...classical, ...quantum]) {
-    const key = variationKey(a.variation);
-    counts.set(key, (counts.get(key) || 0) + 1);
-  }
+  for (const keys of keysOf.values()) for (const key of keys) counts.set(key, (counts.get(key) || 0) + 1);
+  const unnamed = side => side.filter(eligible).every(a => [...keysOf.get(a)].every(key => key === ""));
+  const classicalAny = unnamed(classical), quantumAny = unnamed(quantum);
+  const inVariation = (side, any, key) => side.filter(a => any || keysOf.get(a).has(key));
   const shared = [...counts.keys()]
-    .filter(key => classical.some(a => eligible(a) && variationKey(a.variation) === key)
-      && quantum.some(a => eligible(a) && variationKey(a.variation) === key))
-    .sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b));
+    .filter(key => inVariation(classical, classicalAny, key).some(eligible) && inVariation(quantum, quantumAny, key).some(eligible))
+    .sort((a, b) => (a !== "") - (b !== "") || counts.get(b) - counts.get(a) || a.localeCompare(b));
   if (!shared.length) return { classicalDefault: null, quantumDefault: null, variation: null };
   const key = shared[0];
-  const inVariation = a => variationKey(a.variation) === key;
-  const classicalDefault = pickClassicalDefault(classical.filter(inVariation), problem);
-  const quantumDefault = pickQuantumDefault(quantum.filter(inVariation));
-  return { classicalDefault, quantumDefault, variation: classicalDefault?.variation || quantumDefault?.variation || null };
+  const classicalDefault = pickClassicalDefault(inVariation(classical, classicalAny, key), problem);
+  const quantumDefault = pickQuantumDefault(inVariation(quantum, quantumAny, key));
+  const named = [classicalDefault, quantumDefault].find(a => a?.variation && keysOf.get(a).has(key));
+  const variation = named && String(named.variation).split(/;|\n/).map(part => part.trim())
+    .find(part => variationKey(part, problem) === key);
+  return { classicalDefault, quantumDefault, variation: variation || null };
 }
 
 // Variation names on each side, with how many usable exact algorithms each has.
