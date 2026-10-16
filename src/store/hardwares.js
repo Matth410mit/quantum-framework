@@ -49,6 +49,7 @@ const quantinuumRoadmap = {
     2029: 1000,
 };
 
+// provenance: who published the roadmap numbers (see roadmapSchema.js PROVENANCES).
 const initialPresets = [
     {
         hardwareName: "IBM (Superconducting)",
@@ -66,6 +67,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
         reference: "https://www.ibm.com/roadmaps/quantum.pdf",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "IBM 2025 (Superconducting)",
@@ -83,6 +85,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
         reference: "https://www.ibm.com/quantum/hardware#roadmap",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "Google (Superconducting)",
@@ -103,6 +106,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
         reference: "Sycamore (2019), and Willow (2024).",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "Rigetti (Superconducting)",
@@ -124,6 +128,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
         reference: "19Q (2018), Aspen-M non-modular (2021), Ankaa-3 (2024)",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "IQM (Superconducting)",
@@ -141,6 +146,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
         reference: "https://iqm.tech/technology/roadmap/",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "IonQ (Trapped Ion)",
@@ -162,6 +168,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
         reference: "https://ionq.com/blog/how-we-achieved-our-2024-performance-target-of-aq-35",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "Quantinuum (Trapped Ion)",
@@ -179,6 +186,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
         reference: "https://www.quantinuum.com/press-releases/quantinuum-unveils-accelerated-roadmap-to-achieve-universal-fault-tolerant-quantum-computing-by-2030",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "QuEra (Neutral Atom)",
@@ -200,6 +208,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
         reference: "https://www.quera.com/qec",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "Pasqal (Neutral Atom)",
@@ -221,6 +230,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
         reference: "https://www.hpcwire.com/2024/03/13/pasqal-issues-roadmap-to-10000-qubits-in-2026-and-fault-tolerance-in-2028/",
+        provenance: "third-party",
     },
     {
         hardwareName: "Infleqtion (Neutral Atom)",
@@ -242,6 +252,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
         reference: "https://www.nextbigfuture.com/2024/02/infleqtion-1600-qubit-array-today-and-five-year-roadmap-to-fault-tolerant-quantum-computers.html",
+        provenance: "third-party",
     },
     {
         hardwareName: "Quantum Silicon (Semiconductors)",
@@ -263,6 +274,7 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
         reference: "https://www.eetimes.eu/cea-leti-details-silicon-based-quantum-computing-roadmap/",
+        provenance: "third-party",
     },
 ];
 

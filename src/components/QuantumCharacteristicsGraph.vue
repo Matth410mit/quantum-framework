@@ -28,7 +28,8 @@ function processDataToGraph(data) {
     const maxX = Math.max(tCostStar, tStar) + 1
 
     let problemSize = data.quantumFeasible.filter(step => step[0] <= maxX)
-    const logicalQubits = problemSize.map(point => [point[0], utils.problemSizeToQubits(point[1], data.qubitToProblemSize)])
+    const logQubitsNeeded = utils.createLogQubitsNeeded(data.qubitsNeeded)
+    const logicalQubits = problemSize.map(point => [point[0], Math.max(logQubitsNeeded(point[1]), 0)])
     const physicalQubits = problemSize.map(point => [point[0], utils.getPhysicalQubits(point[0], data.roadmap, data.extrapolationType)])
 
     const maxY = Math.max(...problemSize.map(point => point[1]), Math.max(...logicalQubits.map(point => point[1])), Math.max(...physicalQubits.map(point => point[1])))
@@ -311,8 +312,8 @@ function updateGraph() {
                     }
 
                 },
-                x: data.logicalQubits[data.logicalQubits.length - 1][0],
-                y: data.logicalQubits[data.logicalQubits.length - 1][1],
+                x: data.logicalQubits.at(-1)?.[0],
+                y: data.logicalQubits.at(-1)?.[1],
 
             })],
             color: '#a32035',
@@ -352,8 +353,8 @@ function updateGraph() {
                     }
 
                 },
-                x: data.physicalQubits[data.physicalQubits.length - 1][0],
-                y: data.physicalQubits[data.physicalQubits.length - 1][1],
+                x: data.physicalQubits.at(-1)?.[0],
+                y: data.physicalQubits.at(-1)?.[1],
 
             })],
             color: '#E57373',
@@ -393,8 +394,8 @@ function updateGraph() {
                     }
 
                 },
-                x: data.problemSize[data.problemSize.length - 1][0],
-                y: data.problemSize[data.problemSize.length - 1][1],
+                x: data.problemSize.at(-1)?.[0],
+                y: data.problemSize.at(-1)?.[1],
 
             })],
             color: 'darkred',

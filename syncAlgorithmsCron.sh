@@ -1,4 +1,5 @@
-# Algorithm Sync Cron Job Wrapper (Service Account + .env)
+# Algorithm Sync Cron Job Wrapper
+# The sync reads the sheet's public CSV export, so no Google credentials are needed.
 
 # Runs the Node sync script on a schedule and writes logs to ./logs
 
@@ -80,22 +81,13 @@ fi
 log "Node: $NODE_BIN"
 log "Node version: $("$NODE_BIN" --version)"
 
-# Load environment variables from .env (cron does NOT load shell profile)
-if [ ! -f ".env" ]; then
-  die ".env not found in project root ($PROJECT_DIR). Create it with GOOGLE_APPLICATION_CREDENTIALS and SPREADSHEET_ID."
+# Optional .env (e.g. SPREADSHEET_ID to read a different sheet).
+# cron does NOT load the shell profile, so it's sourced here.
+if [ -f ".env" ]; then
+  set -a
+  source ".env"
+  set +a
 fi
-
-# Export variables from .env (simple KEY=VALUE lines)
-set -a
-source ".env"
-set +a
-
-# Validate required env vars
-[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || die "GOOGLE_APPLICATION_CREDENTIALS missing (check .env)."
-[ -n "${SPREADSHEET_ID:-}" ] || die "SPREADSHEET_ID missing (check .env)."
-
-# Validate service account json exists
-[ -f "$GOOGLE_APPLICATION_CREDENTIALS" ] || die "Service account JSON not found at: $GOOGLE_APPLICATION_CREDENTIALS"
 
 # Validate script exists
 [ -f "$SYNC_SCRIPT" ] || die "Sync script not found at: $PROJECT_DIR/$SYNC_SCRIPT"
@@ -104,7 +96,7 @@ set +a
 log "Running sync: $NODE_BIN $SYNC_SCRIPT"
 if "$NODE_BIN" "$SYNC_SCRIPT" >> "$LOG_FILE" 2>&1; then
   log "Sync completed successfully!"
-  log "Updated: $PROJECT_DIR/src/store/algorithmVariants.js"
+  log "Updated: $PROJECT_DIR/src/store/algorithmVariants.js and docs/sheet-sync-report.md"
   send_notification "Algorithm Sync Success" "Algorithms updated successfully at $(date)
 Log: $LOG_FILE"
 else

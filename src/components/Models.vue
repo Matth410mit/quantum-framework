@@ -80,26 +80,10 @@ function getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenalt
     return Math.log10(result);
 }
 
-// converts expression with q (qubits) to expression with n (problem size)
-// by using the inverse of the mapping. Supports BOTH legacy "{q}" strings
-// and the new "q" strings.
+// Replaces q (logical qubits) in a formula with the qubits needed for size n,
+// so work and penalty formulas can use q.
 function convertQubits(model, expression) {
-    const kind = utils.classifyQubitMapping(model.qubitToProblemSize); // 'exp', 'doubleexp', 'linear', 'log', 'custom'
-    let replacement = "";
-
-    if (kind === 'exp') {   // n = 2^q   ->  q = log2(n)
-        replacement = "(log(n, 2))";
-    } else if (kind === 'log') { // n = log2(q)  ->  q = 2^n
-        replacement = "(2^n)";
-    } else if (kind === 'linear') { // n = q   ->  q = n
-        replacement = "n";
-    } else {
-        // Arbitrary mapping: don't attempt a symbolic inverse
-        return expression;
-    }
-
-    // Replace any occurrence of q (or {q}) in the math expression safely
-    return utils.replaceVariable(expression, "q", replacement);
+    return utils.replaceVariable(expression, "q", `(${utils.modelQubitsNeeded(model)})`);
 }
 
 
@@ -245,7 +229,7 @@ function calculateQuantumEconomicAdvantage(model) {
     let physicalLogicalQubitsRatio = model.physicalLogicalQubitsRatio;
     let ratioImprovementRate = utils.percentageToFraction(Number(model.ratioImprovementRate));
     let quantumImprovementRate = utils.percentageToFraction(Number(model.quantumImprovementRate));
-    let qubitToProblemSize = model.qubitToProblemSize;
+    let qubitsNeeded = utils.modelQubitsNeeded(model);
     let roadmapUnit = model.roadmapUnit;
 
     let classicalRuntimeInput = model.classicalRuntimeInput;
@@ -269,7 +253,7 @@ function calculateQuantumEconomicAdvantage(model) {
     let processors = model.processors;
 
     function qf(roadmap) {
-        return year => getQuantumFeasible(year, roadmap, physicalLogicalQubitsRatio, ratioImprovementRate, qubitToProblemSize, roadmapUnit)
+        return year => getQuantumFeasible(year, roadmap, physicalLogicalQubitsRatio, ratioImprovementRate, qubitsNeeded, roadmapUnit)
     }
 
     function qa(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate) {
@@ -542,7 +526,7 @@ function calculateQuantumEconomicAdvantage(model) {
         extrapolationType: model.extrapolationType,
         physicalLogicalQubitsRatio: physicalLogicalQubitsRatio,
         ratioImprovementRate: ratioImprovementRate,
-        qubitToProblemSize: qubitToProblemSize,
+        qubitsNeeded: qubitsNeeded,
         quantumFeasible: quantumEconomicAdvantageDataAux.quantumFeasible,
     }
 }
@@ -571,13 +555,14 @@ function getLogicalQubits(year, roadmap, physicalLogicalQubitsRatio, ratioImprov
 }
 
 
-// returns the (base-10) log of the problem size solvable for a given year
+// returns the (base-10) log of the problem size solvable for a given year:
+// the largest n whose qubits needed fit in the logical qubits available
 function getQuantumFeasible(
     year,
     roadmap,
     physicalLogicalQubitsRatio,
     ratioImprovementRate,
-    qubitToProblemSize,
+    qubitsNeeded,
     roadmapUnit
 ) {
     // logLogicalQubits has the log_10 of the true number of logical qubits
@@ -588,49 +573,7 @@ function getQuantumFeasible(
         ratioImprovementRate,
         roadmapUnit
     )
-
-    // Classify the mapping (supports both old "{q}" and new "q" forms)
-    const kind = utils.classifyQubitMapping(qubitToProblemSize)
-
-    if (kind === 'exp') {
-        // n = 2^q  (return log10(n))
-        if (logLogicalQubits <= 0) return 0;
-        let problemSize = (logLogicalQubits + Math.log10(Math.log10(2)))
-        let result = 10 ** problemSize;
-        if (!Number.isFinite(result) || isNaN(result)) return 0;
-        return result;
-    }
-
-    if (kind === 'doubleexp') {
-        // n = 2^(2^q)
-        if (logLogicalQubits <= 0) return 0;
-        let problemSize = Math.pow(2, Math.pow(10, logLogicalQubits)) * Math.log10(2)
-        if (!Number.isFinite(problemSize) || isNaN(problemSize)) return 0;
-        return problemSize
-    }
-
-    if (kind === 'linear') {
-        // n = q
-        return logLogicalQubits
-    }
-
-    if (kind === 'log') {
-        // n = log2(q)
-        if (logLogicalQubits <= 0) return 0;
-        let problemSize = Math.log10(logLogicalQubits) - Math.log10(Math.log10(2))
-        if (!Number.isFinite(problemSize) || isNaN(problemSize)) return 0;
-        return Math.max(problemSize, 0);
-    }
-
-    // Custom expression n(q): evaluate numerically with the number of logical qubits
-    const logicalQubits = Math.pow(10, logLogicalQubits)
-    const mapped = utils.evaluateQubitMapping(qubitToProblemSize, logicalQubits, { clamp: 1e300 })
-
-    if (!mapped.ok) {
-        console.log("Custom qubit to problem mapping could not be evaluated:", mapped.error)
-        return 0
-    }
-    return mapped.value
+    return utils.problemSizeForQubits(qubitsNeeded, logLogicalQubits)
 }
 
 
