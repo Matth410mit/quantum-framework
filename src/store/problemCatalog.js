@@ -220,6 +220,7 @@ function fromSheet(p) {
         qubitsNeeded: quantumDefault?.qubitsFormula || 'n',
         assumptions: p.assumptions || [],
         noSpeedup: !!p.noSpeedup,
+        variation: p.variation || null,
         fromSheet: true,
         defaults: {
             classical: { variantKey: p.defaultClassicalKey },

@@ -45,7 +45,7 @@
                                         <span v-if="option.parallel"
                                             class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Parallel</span>
                                     </div>
-                                    <div class="text-xs opacity-70">{{ option.authorsLabel || option.description }}</div>
+                                    <div class="text-xs opacity-70">{{ [option.variation, option.authorsLabel || option.description].filter(Boolean).join(' · ') }}</div>
                                 </div>
                             </template>
                             <template #singleLabel="{ option }">
@@ -117,7 +117,7 @@
                                         <span v-if="option.parallel"
                                             class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Parallel</span>
                                     </div>
-                                    <div class="text-xs opacity-70">{{ option.authorsLabel || option.description }}</div>
+                                    <div class="text-xs opacity-70">{{ [option.variation, option.authorsLabel || option.description].filter(Boolean).join(' · ') }}</div>
                                 </div>
                             </template>
                             <template #singleLabel="{ option }">

@@ -439,6 +439,9 @@ function onAlgorithmChange(type, algorithm) {
                                 <span v-else :title="algorithmCredit(r.algo)" class="cursor-help">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></span>
                             </li>
                         </ul>
+                        <p v-if="selectedProblem.variation" class="mt-1">
+                            Both defaults solve the same variation: {{ selectedProblem.variation }}.
+                        </p>
                         <p v-if="selectedProblem.noSpeedup" class="mt-1 text-amber-900">
                             No known quantum speedup: the best quantum algorithm in the sheet grows no slower than the best classical one.
                         </p>

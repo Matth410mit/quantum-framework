@@ -112,6 +112,10 @@ function credits(problem) {
     min-height: 0 !important;
     color: #374151 !important;
     background: #f3f4f6 !important;
+    /* vue-multiselect turns pointer events off on group labels; the header
+       button needs them to toggle the group. */
+    pointer-events: auto !important;
+    cursor: pointer;
 }
 .problem-picker .multiselect__element:has(.collapsed-placeholder) {
     display: none;

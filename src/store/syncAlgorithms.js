@@ -248,6 +248,7 @@ function buildAlgorithm(record, type, problem, index) {
     complexity: record.time || null,
     encoding: parseEncoding(record.encoding),
     preferredParameter: record.preferred || null,
+    variation: record.variation ? record.variation.replace(/\s+/g, " ").trim() : null,
     approximate,
     heuristic,
     parallel: isParallel,
@@ -335,6 +336,46 @@ function pickQuantumDefault(algorithms) {
     || (b.year ?? 0) - (a.year ?? 0))[0] || null;
 }
 
+// Variations are compared by name, ignoring case, spacing and punctuation.
+function variationKey(variation) {
+  return String(variation || "").toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// Defaults are only compared within one Variation, so a problem's two
+// defaults solve the same version of it (e.g. not 3-coloring against general
+// coloring). Among the variations with an eligible algorithm on both sides,
+// the one with the most sheet rows is used.
+function pickDefaultsByVariation(classical, quantum, problem) {
+  const counts = new Map();
+  for (const a of [...classical, ...quantum]) {
+    const key = variationKey(a.variation);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const shared = [...counts.keys()]
+    .filter(key => classical.some(a => eligible(a) && variationKey(a.variation) === key)
+      && quantum.some(a => eligible(a) && variationKey(a.variation) === key))
+    .sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b));
+  if (!shared.length) return { classicalDefault: null, quantumDefault: null, variation: null };
+  const key = shared[0];
+  const inVariation = a => variationKey(a.variation) === key;
+  const classicalDefault = pickClassicalDefault(classical.filter(inVariation), problem);
+  const quantumDefault = pickQuantumDefault(quantum.filter(inVariation));
+  return { classicalDefault, quantumDefault, variation: classicalDefault?.variation || quantumDefault?.variation || null };
+}
+
+// Variation names on each side, with how many usable exact algorithms each has.
+function variationSummary(list) {
+  const counts = new Map();
+  for (const a of list) {
+    const name = a.variation || "(no variation)";
+    const entry = counts.get(name) || { rows: 0, eligible: 0 };
+    entry.rows++;
+    if (eligible(a)) entry.eligible++;
+    counts.set(name, entry);
+  }
+  return [...counts.entries()].map(([name, c]) => `${name} (${c.eligible} of ${c.rows} usable exact)`).join("; ") || "none";
+}
+
 // "n: number of vertices" from a row's parameter definitions
 function sizeDefinition(algorithm, records, problem) {
   const record = records.find(r => r.source === algorithm?.source && r.row === algorithm?.sheetRow);
@@ -398,8 +439,7 @@ export async function main(argv = process.argv.slice(2)) {
     const classical = dedupe(classicalRecords.filter(r => r.name || r.time).map((r, i) => buildAlgorithm(r, "classical", problem, i)));
     const quantum = dedupe(quantumRecords.filter(r => r.name || r.time).map((r, i) => buildAlgorithm(r, "quantum", problem, i)));
 
-    const classicalDefault = pickClassicalDefault(classical, problem);
-    const quantumDefault = pickQuantumDefault(quantum);
+    const { classicalDefault, quantumDefault, variation } = pickDefaultsByVariation(classical, quantum, problem);
     const usableClassical = classical.filter(a => a.usable);
     const usableQuantum = quantum.filter(a => a.usable);
 
@@ -412,7 +452,10 @@ export async function main(argv = process.argv.slice(2)) {
         quantum: usableQuantum.map(strip),
       };
     } else if (!classicalDefault || !quantumDefault) {
-      status = `Left out: no usable exact ${!classicalDefault ? "classical" : "quantum"} algorithm`;
+      const anyClassical = classical.some(eligible), anyQuantum = quantum.some(eligible);
+      status = !anyClassical || !anyQuantum
+        ? `Left out: no usable exact ${!anyClassical ? "classical" : "quantum"} algorithm`
+        : "Left out: no Variation has a usable exact algorithm on both sides";
     } else {
       status = "Included";
       algorithmVariants[problem.problemName] = {
@@ -428,14 +471,15 @@ export async function main(argv = process.argv.slice(2)) {
         domain: domain ? domain.split(/[,;]/)[0].trim() : null,
         sizeParameter: sizeDefinition(quantumDefault, allRecords, problem) || sizeDefinition(classicalDefault, allRecords, problem),
         assumptions: problem.assumptions || [],
+        variation,
         defaultClassicalKey: classicalDefault.key,
         defaultQuantumKey: quantumDefault.key,
         noSpeedup: quantumGrowth >= classicalGrowth,
       });
     }
 
-    report.push({ problem, status, classical, quantum, classicalDefault, quantumDefault });
-    console.log(`   ${problem.problemName}: ${usableClassical.length}/${classical.length} classical, ${usableQuantum.length}/${quantum.length} quantum usable. ${status}`);
+    report.push({ problem, status, classical, quantum, classicalDefault, quantumDefault, variation });
+    console.log(`   ${problem.problemName}: ${usableClassical.length}/${classical.length} classical, ${usableQuantum.length}/${quantum.length} quantum usable. ${status}${variation && !problem.handPicked ? ` [${variation}]` : ""}`);
   }
 
   fs.writeFileSync(path.resolve(process.cwd(), OUTPUT_FILE), generateJs({ algorithmVariants, sheetProblems }), "utf8");
@@ -488,11 +532,15 @@ function generateReport(report, missingFamilies) {
   for (const r of report) {
     lines.push(`## ${r.problem.problemName}`, "");
     if (r.classicalDefault) lines.push(`Default classical: ${r.classicalDefault.name}${r.classicalDefault.year ? ` (${r.classicalDefault.year})` : ""}  `);
-    if (r.quantumDefault) lines.push(`Default quantum: ${r.quantumDefault.name}${r.quantumDefault.year ? ` (${r.quantumDefault.year})` : ""}`);
-    lines.push("", "| | Side | Algorithm | Year | Sheet text | Code | Formula or reason |", "|---|---|---|---|---|---|---|");
+    if (r.quantumDefault) lines.push(`Default quantum: ${r.quantumDefault.name}${r.quantumDefault.year ? ` (${r.quantumDefault.year})` : ""}  `);
+    if (!r.problem.handPicked) {
+      if (r.variation) lines.push(`Variation compared: ${r.variation}  `);
+      lines.push(`Classical variations: ${cell(variationSummary(r.classical))}  `, `Quantum variations: ${cell(variationSummary(r.quantum))}`);
+    }
+    lines.push("", "| | Side | Algorithm | Year | Variation | Sheet text | Code | Formula or reason |", "|---|---|---|---|---|---|---|---|");
     for (const [side, list] of [["Classical", r.classical], ["Quantum", r.quantum]]) {
       for (const a of list) {
-        lines.push(`| ${a.usable ? "✓" : "✗"} | ${side}${a.parallel ? " (parallel)" : a.approximate ? " (approx.)" : ""} | ${cell(a.name)} | ${a.year ?? ""} | \`${cell(a.complexity)}\` | ${a.encoding ?? ""} | ${a.usable ? `\`${cell(a.runtimeFormula)}\`` : cell(a.reason)} |`);
+        lines.push(`| ${a.usable ? "✓" : "✗"} | ${side}${a.parallel ? " (parallel)" : a.approximate ? " (approx.)" : ""} | ${cell(a.name)} | ${a.year ?? ""} | ${cell(a.variation)} | \`${cell(a.complexity)}\` | ${a.encoding ?? ""} | ${a.usable ? `\`${cell(a.runtimeFormula)}\`` : cell(a.reason)} |`);
       }
     }
     lines.push("");
