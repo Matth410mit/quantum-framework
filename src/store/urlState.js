@@ -6,7 +6,8 @@
  * hardware preset when a link is opened.
  */
 
-import { findProblem, getDefaultAlgorithm } from './problemCatalog';
+import { findProblem, getDefaultAlgorithm, qubitsNeededFor } from './problemCatalog';
+import { modelQubitsNeeded } from './utils';
 
 const PARAM = 'setup';
 
@@ -50,6 +51,12 @@ function encodeAlgorithm(problem, model, type) {
     return [runtime, work];
 }
 
+// Qubits needed, stored only when it differs from the default quantum algorithm's.
+function encodeQubits(problem, model) {
+    const qubits = modelQubitsNeeded(model);
+    return problem && qubits === qubitsNeededFor(problem, getDefaultAlgorithm(problem, 'quantum')) ? undefined : qubits;
+}
+
 export function encodeSetup(models) {
     return toBase64Url(JSON.stringify(models.map(m => {
         const problem = findProblem(m.problemName);
@@ -58,6 +65,7 @@ export function encodeSetup(models) {
             h: m.hardwareName,
             c: encodeAlgorithm(problem, m, 'classical'),
             q: encodeAlgorithm(problem, m, 'quantum'),
+            k: encodeQubits(problem, m),
         };
     })));
 }
@@ -83,9 +91,9 @@ export function decodeSetup(text, template, hardwares) {
         const problem = findProblem(entry?.p);
         if (problem) {
             model.problemName = problem.problemName;
-            model.qubitToProblemSize = problem.qubitToProblemSize;
             const c = getDefaultAlgorithm(problem, 'classical');
             const q = getDefaultAlgorithm(problem, 'quantum');
+            model.qubitsNeeded = qubitsNeededFor(problem, q);
             if (c) [model.classicalRuntimeInput, model.classicalWork] = [c.runtimeFormula, c.workFormula];
             if (q) [model.quantumRuntimeInput, model.quantumWork] = [q.runtimeFormula, q.workFormula];
         }
@@ -95,6 +103,7 @@ export function decodeSetup(text, template, hardwares) {
         if (Array.isArray(entry?.q) && entry.q.length === 2) {
             [model.quantumRuntimeInput, model.quantumWork] = entry.q.map(String);
         }
+        if (typeof entry?.k === 'string' && entry.k) model.qubitsNeeded = entry.k;
         return model;
     });
 }

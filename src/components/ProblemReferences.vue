@@ -43,23 +43,23 @@ const references = [
     },
     {
         problemName: "Integer Factorization",
-        classicalRuntimeLabel: "O(e^{(64/9 * n)^{1/3} * \\ln(n)^{2/3}})",
+        classicalRuntimeLabel: "O(e^{(64/9 \\cdot n \\ln 2)^{1/3} (\\ln(n \\ln 2))^{2/3}})",
         classicalReferenceTitle: "General Number Field Sieve",
         classicalReferenceLink: `Pomerance, Carl. "A tale of two sieves." Notices of the American Mathematical Society 43.12 (1996): 1473-1485.`,
 
 
-        quantumRuntimeLabel: "O(n^{2} * \\ln(n))",
-        quantumReferenceTitle: "Shor's Algorithm",
-        quantumReferenceLink: "Peter Shor Algorithms for Quantum Computation: Discrete Logarithms and Factoring. In Proceedings of FOCS 1994, pg. 124-134.",
+        quantumRuntimeLabel: "n^{2}(500 + \\log_2 n)",
+        quantumReferenceTitle: "Shor's Algorithm (Gidney & Ekerå, 2019)",
+        quantumReferenceLink: `Gidney, Craig, and Martin Ekerå. "How to factor 2048 bit RSA integers in 8 hours using 20 million noisy qubits." Quantum 5 (2021): 433. arXiv:1905.09749. Runtime is the measurement depth; work is the Toffoli count 0.3n³ + 0.0005n³ log₂ n; logical qubits 3n + 0.002n log₂ n.`,
     },
     {
         problemName: "Traveling Salesman",
-        classicalRuntimeLabel: "O(n^{3} * 2^{n})",
+        classicalRuntimeLabel: "O(n^{2} \\cdot 2^{n})",
         classicalReferenceTitle: "Dynamic Programming",
         classicalReferenceLink: `Held, Michael, and Richard M. Karp. "A dynamic programming approach to sequencing problems." Journal of the Society for Industrial and Applied mathematics 10.1 (1962): 196-210.`,
 
         quantumRuntimeLabel: "O(n * 1.78^{n})",
-        quantumReferenceTitle: "Quantum Approximate Optimization Algorithm",
+        quantumReferenceTitle: "Ambainis et al. (2019)",
         quantumReferenceLink: `A. Ambainis, K. Balodis, J. Iraids, M. Kokainis, K. Prusis, and J. Vihrovs Quantum speedups for exponential-time dynamic programming algorithms Proceedings of the 30th Annual ACM-SIAM Symposium on Discrete Algorithms (SODA 19), pg. 1783-1793, 2019. [arXiv:1807.05209]`,
     },
     {

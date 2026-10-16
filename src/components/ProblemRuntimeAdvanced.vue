@@ -14,6 +14,12 @@
                         Reset to recommended
                     </button>
                 </div>
+                <div v-if="noSpeedup || assumptions.length" class="rounded-lg bg-gray-50 p-2 text-xs text-gray-700">
+                    <p v-if="noSpeedup" class="text-amber-900">
+                        No known quantum speedup: the best quantum algorithm in the sheet grows no slower than the best classical one.
+                    </p>
+                    <p v-for="note in assumptions" :key="note" class="italic">{{ note }}</p>
+                </div>
                 <!-- Classical Algorithm Section -->
                 <div class="border rounded-lg p-4 bg-gray-50">
                     <h3 class="font-semibold text-md mb-3 text-gray-700">Classical Algorithm</h3>
@@ -28,18 +34,18 @@
                             :options="availableClassicalAlgorithms" :searchable="true" :close-on-select="true"
                             :allowEmpty="false" :show-labels="false" placeholder="Choose classical algorithm">
                             <template #option="{ option }">
-                                <div>
+                                <div :title="algorithmCredit(option)">
                                     <div class="font-medium">
                                         {{ option.name }}
                                         <span v-if="option.year" class="font-normal opacity-70">({{ option.year }})</span>
                                         <span v-if="option.recommended"
                                             class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
-                                        <span v-if="option.approximation"
+                                        <span v-if="option.approximate || option.approximation"
                                             class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Approx.</span>
                                         <span v-if="option.parallel"
                                             class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Parallel</span>
                                     </div>
-                                    <div class="text-xs opacity-70">{{ option.description }}</div>
+                                    <div class="text-xs opacity-70">{{ option.authorsLabel || option.description }}</div>
                                 </div>
                             </template>
                             <template #singleLabel="{ option }">
@@ -51,13 +57,11 @@
                                 </div>
                             </template>
                         </Multiselect>
-                        <p v-if="localSelectedClassicalAlgorithm" class="text-xs text-gray-600 mt-1">
-                            {{ localSelectedClassicalAlgorithm.description }}
-                        </p>
-                        <p v-if="hiddenClassicalCount" class="text-xs text-gray-500 mt-1">
-                            {{ hiddenClassicalCount }} more {{ hiddenClassicalCount === 1 ? 'algorithm is' : 'algorithms are' }}
-                            in the algorithm sheet but hidden, because {{ hiddenClassicalCount === 1 ? 'its formula' : 'their formulas' }}
-                            can't be calculated yet.
+                        <p v-if="localSelectedClassicalAlgorithm && algorithmCredit(localSelectedClassicalAlgorithm)"
+                            class="text-xs text-gray-600 mt-1 whitespace-pre-line">
+                            <a v-if="localSelectedClassicalAlgorithm.url" :href="localSelectedClassicalAlgorithm.url" target="_blank"
+                                rel="noopener" class="text-blue-900 hover:underline">{{ algorithmCredit(localSelectedClassicalAlgorithm) }}</a>
+                            <template v-else>{{ algorithmCredit(localSelectedClassicalAlgorithm) }}</template>
                         </p>
                     </div>
 
@@ -102,18 +106,18 @@
                             :searchable="true" :close-on-select="true" :allowEmpty="false" :show-labels="false"
                             placeholder="Choose quantum algorithm">
                             <template #option="{ option }">
-                                <div>
+                                <div :title="algorithmCredit(option)">
                                     <div class="font-medium">
                                         {{ option.name }}
                                         <span v-if="option.year" class="font-normal opacity-70">({{ option.year }})</span>
                                         <span v-if="option.recommended"
                                             class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
-                                        <span v-if="option.approximation"
+                                        <span v-if="option.approximate || option.approximation"
                                             class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Approx.</span>
                                         <span v-if="option.parallel"
                                             class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Parallel</span>
                                     </div>
-                                    <div class="text-xs opacity-70">{{ option.description }}</div>
+                                    <div class="text-xs opacity-70">{{ option.authorsLabel || option.description }}</div>
                                 </div>
                             </template>
                             <template #singleLabel="{ option }">
@@ -125,13 +129,11 @@
                                 </div>
                             </template>
                         </Multiselect>
-                        <p v-if="localSelectedQuantumAlgorithm" class="text-xs text-gray-600 mt-1">
-                            {{ localSelectedQuantumAlgorithm.description }}
-                        </p>
-                        <p v-if="hiddenQuantumCount" class="text-xs text-gray-500 mt-1">
-                            {{ hiddenQuantumCount }} more {{ hiddenQuantumCount === 1 ? 'algorithm is' : 'algorithms are' }}
-                            in the algorithm sheet but hidden, because {{ hiddenQuantumCount === 1 ? 'its formula' : 'their formulas' }}
-                            can't be calculated yet.
+                        <p v-if="localSelectedQuantumAlgorithm && algorithmCredit(localSelectedQuantumAlgorithm)"
+                            class="text-xs text-gray-600 mt-1 whitespace-pre-line">
+                            <a v-if="localSelectedQuantumAlgorithm.url" :href="localSelectedQuantumAlgorithm.url" target="_blank"
+                                rel="noopener" class="text-blue-900 hover:underline">{{ algorithmCredit(localSelectedQuantumAlgorithm) }}</a>
+                            <template v-else>{{ algorithmCredit(localSelectedQuantumAlgorithm) }}</template>
                         </p>
                     </div>
 
@@ -230,6 +232,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import * as math from 'mathjs';
 import * as utils from '../store/utils';
+import { algorithmCredit } from '../store/problemCatalog';
 
 const emit = defineEmits(['updateFunctions', 'updateAlgorithmChange']);
 
@@ -263,13 +266,14 @@ const props = defineProps({
         type: Number,
         default: null,
     },
-    hiddenClassicalCount: {
-        type: Number,
-        default: 0,
+    // notes about the problem (e.g. dense graphs) and whether the sheet shows no speedup
+    assumptions: {
+        type: Array,
+        default: () => [],
     },
-    hiddenQuantumCount: {
-        type: Number,
-        default: 0,
+    noSpeedup: {
+        type: Boolean,
+        default: false,
     },
     sizeParameter: {
         type: String,

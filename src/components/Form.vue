@@ -17,10 +17,11 @@ import ProblemRuntimeAdvanced from './ProblemRuntimeAdvanced.vue';
 import * as math from 'mathjs';
 import * as utils from '../store/utils';
 import ProblemBrowser from './ProblemBrowser.vue';
+import ProblemPicker from './ProblemPicker.vue';
 import {
-    findProblem, groupedProblemOptions, hasValidFormulas,
-    getAlgorithmOptions, getDefaultAlgorithm, getHiddenAlgorithmCount,
-    isModifiedFromDefaults,
+    findProblem, hasValidFormulas,
+    getAlgorithmOptions, getDefaultAlgorithm,
+    isModifiedFromDefaults, qubitsNeededFor, algorithmCredit,
 } from '../store/problemCatalog';
 import { hardwareToRoadmap, roadmapToQubitSeries } from '../store/roadmapSchema.js';
 import { applyHardwareToModel } from '../store/urlState';
@@ -55,19 +56,6 @@ function safeRenderKaTeX(input) {
     }
 }
 
-const qubitSizeOptions = ref([
-    "2^{q}",
-    "{q}",
-    "log({q})",
-]);
-
-// Problem dropdown: "Popular" first (if any are ranked), then grouped by domain.
-// Search matches names, categories and aliases (e.g. "RSA", "Grover", "TSP").
-const problemQuery = ref('');
-const problemOptions = computed(() => groupedProblemOptions(problemQuery.value));
-
-const hiddenClassicalCount = computed(() => getHiddenAlgorithmCount(selectedProblem.value, 'classical'));
-const hiddenQuantumCount = computed(() => getHiddenAlgorithmCount(selectedProblem.value, 'quantum'));
 
 // The recommended algorithms for the selected problem, with their papers.
 const defaultReferences = computed(() => ['classical', 'quantum']
@@ -83,12 +71,6 @@ function resetToRecommended() {
     if (quantum) onAlgorithmChange('quantum', quantum);
 }
 
-function problemSubtitle(problem) {
-    const c = getDefaultAlgorithm(problem, 'classical');
-    const q = getDefaultAlgorithm(problem, 'quantum');
-    const label = (a) => a ? (a.year ? `${a.name} (${a.year})` : a.name) : '—';
-    return `${label(c)} vs ${label(q)}`;
-}
 
 
 const hardwares = computed(() => hardwaresStore.all);
@@ -96,6 +78,9 @@ const hardwares = computed(() => hardwaresStore.all);
 
 
 const model = ref(models.models.find(m => m.id === props.modelId));
+
+// Older saved models only have the n(q) mapping; show it as Q(n).
+if (model.value && !model.value.qubitsNeeded) model.value.qubitsNeeded = utils.modelQubitsNeeded(model.value);
 
 function updateSlowdown(hwSlowdown, advancedSlowdown) {
     model.value.hardwareSlowdown = hwSlowdown;
@@ -134,7 +119,8 @@ watch(() => selectedProblem.value, (problem) => {
 
     // Batch-apply all model values at once to avoid intermediate states
     model.value.problemName = problem.problemName;
-    model.value.qubitToProblemSize = problem.qubitToProblemSize;
+    model.value.qubitsNeeded = qubitsNeededFor(problem, quantum);
+    delete model.value.qubitToProblemSize;
     if (classical) {
         model.value.classicalRuntimeInput = classical.runtimeFormula;
         model.value.classicalWork = classical.workFormula;
@@ -303,6 +289,7 @@ function onAlgorithmChange(type, algorithm) {
         selectedQuantumAlgorithm.value = algorithm;
         model.value.quantumRuntimeInput = algorithm.runtimeFormula;
         model.value.quantumWork = algorithm.workFormula;
+        model.value.qubitsNeeded = qubitsNeededFor(selectedProblem.value, algorithm);
     }
 }
 
@@ -364,22 +351,7 @@ function onAlgorithmChange(type, algorithm) {
                         </template>
                     </ReferenceDialog>
                 </div>
-                <multiselect class="custom-multiselect mt-1" track-by="problemName" label="problemName"
-                    v-model="selectedProblem" :options="problemOptions" group-values="problems" group-label="label"
-                    :group-select="false" :searchable="true" :internal-search="false" @search-change="problemQuery = $event"
-                    @close="problemQuery = ''" :close-on-select="true" :allowEmpty="false" :show-labels="false"
-                    placeholder="Search problems">
-                    <template #option="{ option }">
-                        <span v-if="option.$isLabel" class="text-xs font-semibold uppercase tracking-wide">{{ option.$groupLabel }}</span>
-                        <div v-else>
-                            <div>
-                                {{ option.problemName }}
-                            </div>
-                            <div class="text-xs opacity-70">{{ problemSubtitle(option) }}</div>
-                        </div>
-                    </template>
-                    <template #noResult>No matching problems. Try Browse for the full list.</template>
-                </multiselect>
+                <ProblemPicker v-model="selectedProblem" />
             </div>
 
             <div class="w-full">
@@ -439,8 +411,9 @@ function onAlgorithmChange(type, algorithm) {
                             :availableQuantumAlgorithms="availableQuantumAlgorithms"
                             :selectedClassicalAlgorithm="selectedClassicalAlgorithm"
                             :selectedQuantumAlgorithm="selectedQuantumAlgorithm"
-                            :hiddenClassicalCount="hiddenClassicalCount" :hiddenQuantumCount="hiddenQuantumCount"
                             :sizeParameter="selectedProblem?.sizeParameter"
+                            :assumptions="selectedProblem?.assumptions || []"
+                            :noSpeedup="!!selectedProblem?.noSpeedup"
                             @updateFunctions="updateFunctions"
                             @updateAlgorithmChange="onAlgorithmChange" v-slot="{ openModal }">
                             <button class="rounded-md bg-gray-500 text-xs p-0.5 px-2 text-white hover:bg-gray-600"
@@ -451,23 +424,7 @@ function onAlgorithmChange(type, algorithm) {
                         </div>
                     </div>
 
-                    <!-- Problem selector (same UI as before; no algorithm dropdown here) -->
-                    <multiselect class="custom-multiselect mt-1" track-by="problemName" label="problemName"
-                        v-model="selectedProblem" :options="problemOptions" group-values="problems" group-label="label"
-                        :group-select="false" :searchable="true" :internal-search="false" @search-change="problemQuery = $event"
-                        @close="problemQuery = ''" :close-on-select="true" :allowEmpty="false" :show-labels="false"
-                        placeholder="Search problems">
-                        <template #option="{ option }">
-                            <span v-if="option.$isLabel" class="text-xs font-semibold uppercase tracking-wide">{{ option.$groupLabel }}</span>
-                            <div v-else>
-                                <div>
-                                    {{ option.problemName }}
-                                </div>
-                                <div class="text-xs opacity-70">{{ problemSubtitle(option) }}</div>
-                            </div>
-                        </template>
-                        <template #noResult>No matching problems. Try Browse for the full list.</template>
-                    </multiselect>
+                    <ProblemPicker v-model="selectedProblem" />
 
                     <!-- What the problem is, what n means, and the recommended algorithms' papers -->
                     <div v-if="selectedProblem" class="mt-2 rounded-lg bg-gray-50 p-2 text-xs text-gray-700">
@@ -476,12 +433,16 @@ function onAlgorithmChange(type, algorithm) {
                         <ul class="mt-1">
                             <li v-for="r in defaultReferences" :key="r.type">
                                 <span class="capitalize">{{ r.type }}</span>:
-                                <a v-if="r.algo.reference?.url" :href="r.algo.reference.url" target="_blank"
+                                <a v-if="r.algo.url" :href="r.algo.url" target="_blank"
                                     rel="noopener" class="text-blue-900 hover:underline"
-                                    :title="r.algo.reference.citation">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></a>
-                                <span v-else :title="r.algo.reference?.citation">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></span>
+                                    :title="algorithmCredit(r.algo)">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></a>
+                                <span v-else :title="algorithmCredit(r.algo)" class="cursor-help">{{ r.algo.name }}<span v-if="r.algo.year"> ({{ r.algo.year }})</span></span>
                             </li>
                         </ul>
+                        <p v-if="selectedProblem.noSpeedup" class="mt-1 text-amber-900">
+                            No known quantum speedup: the best quantum algorithm in the sheet grows no slower than the best classical one.
+                        </p>
+                        <p v-for="note in selectedProblem.assumptions || []" :key="note" class="mt-1 italic">{{ note }}</p>
                     </div>
 
                     <div v-if="algorithmsModified"
@@ -589,22 +550,22 @@ function onAlgorithmChange(type, algorithm) {
                     </div>
                 </div>
 
-                <!-- Qubits to Problem Size card -->
+                <!-- Qubits needed card -->
                 <div class="flex flex-col">
-                    <label class="font-medium text-sm" for="qubits_to_size">Qubits to Problem Size</label>
+                    <label class="font-medium text-sm" for="qubits_needed">Logical Qubits Needed</label>
                     <p class="text-xs text-gray-600">
-                        The function which correlates maximum problem size solvable with
-                        the given number of qubits (q).
-                        Use <code>q</code> in your expression. Examples:
-                        <code>q</code>, <code>sqrt(q)</code>, <code>q^2</code>,
-                        <code>log(q, 2)</code>, <code>2^q</code>.
+                        The logical qubits needed to solve a problem of size n. It's set from the
+                        quantum algorithm, and the calculator finds the largest n that fits the
+                        roadmap's logical qubits each year.
+                        Use <code>n</code> in your expression. Examples:
+                        <code>n</code>, <code>2*n + 3</code>, <code>n^2</code>, <code>log(n, 2)</code>.
                     </p>
 
-                    <input class="mt-1 bg-gray-100 p-2 rounded-lg text-sm" v-model="model.qubitToProblemSize"
-                        type="text" placeholder="q" />
+                    <input id="qubits_needed" class="mt-1 bg-gray-100 p-2 rounded-lg text-sm" v-model="model.qubitsNeeded"
+                        type="text" placeholder="n" />
 
                     <!-- live preview -->
-                    <MappingPreview :expr="model.qubitToProblemSize" :roadmap="model.roadmap" />
+                    <MappingPreview :expr="model.qubitsNeeded" :roadmap="model.roadmap" />
                 </div>
             </div>
 

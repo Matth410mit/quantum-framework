@@ -6,12 +6,14 @@ import { readSetupFromUrl, writeSetupToUrl } from './urlState'
 const modelTemplate = {
     id: 1,
     problemName: "Integer Factorization",
-    classicalRuntimeInput: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3)) / p",
-    classicalWork: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3))",
-    quantumRuntimeInput: "n^(2) * log(n, e)",
-    quantumWork: "n^(2) * log(n, e) * q",
+    // Same as the Integer Factorization defaults in problemCatalog.js
+    classicalRuntimeInput: "e^((64/9 * n * log(2))^(1/3) * log(n * log(2))^(2/3)) / p",
+    classicalWork: "e^((64/9 * n * log(2))^(1/3) * log(n * log(2))^(2/3))",
+    quantumRuntimeInput: "n^2 * (500 + log(n, 2))",
+    quantumWork: "0.3 * n^3 + 0.0005 * n^3 * log(n, 2)",
     penaltyInput: "sqrt(q)",
-    qubitToProblemSize: "q",
+    // logical qubits needed for a problem of size n
+    qubitsNeeded: "3 * n + 0.002 * n * log(n, 2)",
     hardwareName: 'IBM (Superconducting)',
     roadmap: {
         2020: 27,

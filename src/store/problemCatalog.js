@@ -5,48 +5,61 @@
  * references already in the app (ProblemReferences.vue). Fields with no
  * source yet are left empty, and the UI hides them until they're filled.
  *
- * To add a problem: add an entry below. To put problems in a "Popular" group
- * at the top of the dropdown: set `popularRank` (1 = first).
+ * Problems come from two places:
+ *   - the hand-written entries below (problems the calculator started with), and
+ *   - `sheetProblems` in algorithmVariants.js, generated from the sheet by
+ *     `npm run sync` (see src/store/sheetSync/problems.config.js).
  */
 
-import { algorithmVariants } from './algorithmVariants';
+import * as variants from './algorithmVariants.js';
 import * as math from 'mathjs';
+
+// Works with both the old generated file (algorithmVariants only) and the new
+// one (sheetProblems too), so the app runs before and after a sync.
+const sheetProblems = variants.sheetProblems || [];
+// The old file filled Database Search with String Search rows; String Search
+// is its own problem now, so those are dropped until the next sync.
+const algorithmVariants = variants.sheetProblems
+    ? (variants.algorithmVariants || {})
+    : Object.fromEntries(Object.entries(variants.algorithmVariants || {}).filter(([name]) => name !== 'Database Search'));
 
 // Problems are grouped by the sheet's Domains column. Problems that aren't in
 // the sheet go in this group.
 export const NO_DOMAIN_LABEL = 'Other';
 
-export const POPULAR_GROUP_LABEL = 'Popular';
-export const POPULAR_LIMIT = 10;
-
 /*
  * domain: the sheet's Domains value for the problem's family (null if not in the sheet).
- * popularRank: position in the "Popular" group (null = not shown there).
  * aliases: extra search keywords.
  * description: shown under the selector and in Browse (null = hidden).
  * sizeParameter: what n means, from the sheet's Parameter definitions (null = hidden).
+ * qubitsNeeded: logical qubits needed for an instance of size n, used when the
+ *   chosen quantum algorithm doesn't give its own count.
+ * assumptions: notes shown with the problem (e.g. dense graphs).
+ * noSpeedup: true when the best quantum algorithm grows no slower than the
+ *   best classical one.
  * defaults.classical / defaults.quantum: the algorithm the calculator starts
  * from when the problem is picked. Names, years and citations are the ones in
  * ProblemReferences.vue; `url` only where the sheet or that file gives one.
- *   - `variantName`: use this algorithm from algorithmVariants.js when its
- *     formulas are valid (so the Algorithm Options picker shows it selected).
- *   - otherwise `runtime`/`work` are used, labeled with `name` and `year`.
+ *   - `variantKey`: use this algorithm from algorithmVariants.js.
+ *   - otherwise `runtime`/`work` (and `qubits` for quantum) are used, labeled
+ *     with `name`, `authors` and `year`.
  */
-export const problemCatalog = [
+const handWritten = [
     {
         problemName: 'Integer Factorization',
         domain: 'Numerical Analysis',
-        popularRank: null,
-        aliases: [],
+        aliases: ['RSA'],
         description: null,
         sizeParameter: 'n: number of bits in the integer',
-        qubitToProblemSize: '{q}',
+        qubitsNeeded: '2*n + 3',
         defaults: {
             classical: {
                 name: 'General Number Field Sieve',
+                authors: 'Pomerance',
                 year: 1996,
-                runtime: 'e^((64/9 * n)^(1/3) * log(n, e)^(2/3)) / p',
-                work: 'e^((64/9 * n)^(1/3) * log(n, e)^(2/3))',
+                // L_N[1/3, (64/9)^(1/3)] with ln N = n ln 2 for an n-bit N.
+                runtime: 'e^((64/9 * n * log(2))^(1/3) * log(n * log(2))^(2/3)) / p',
+                work: 'e^((64/9 * n * log(2))^(1/3) * log(n * log(2))^(2/3))',
                 reference: {
                     citation: 'Pomerance, Carl. "A tale of two sieves." Notices of the American Mathematical Society 43.12 (1996): 1473-1485.',
                     url: null,
@@ -54,12 +67,15 @@ export const problemCatalog = [
             },
             quantum: {
                 name: "Shor's Algorithm",
-                year: 1994,
-                runtime: 'n^(2) * log(n, e)',
-                work: 'n^(2) * log(n, e) * q',
+                authors: 'Gidney & Ekerå',
+                year: 2019,
+                // Measurement depth, Toffoli count and logical qubits from the abstract.
+                runtime: 'n^2 * (500 + log(n, 2))',
+                work: '0.3 * n^3 + 0.0005 * n^3 * log(n, 2)',
+                qubits: '3 * n + 0.002 * n * log(n, 2)',
                 reference: {
-                    citation: 'Peter Shor Algorithms for Quantum Computation: Discrete Logarithms and Factoring. In Proceedings of FOCS 1994, pg. 124-134.',
-                    url: 'https://arxiv.org/pdf/quant-ph/9508027.pdf',
+                    citation: 'Gidney, Craig, and Martin Ekerå. "How to factor 2048 bit RSA integers in 8 hours using 20 million noisy qubits." Quantum 5 (2021): 433. arXiv:1905.09749.',
+                    url: 'https://arxiv.org/abs/1905.09749',
                 },
             },
         },
@@ -67,14 +83,15 @@ export const problemCatalog = [
     {
         problemName: 'Database Search',
         domain: 'Combinatorics',
-        popularRank: null,
-        aliases: [],
+        aliases: ['Unstructured search'],
         description: null,
-        sizeParameter: null,
-        qubitToProblemSize: '2^{q}',
+        sizeParameter: 'n: number of entries',
+        // n = 2^q entries are addressed by q qubits.
+        qubitsNeeded: 'log(n, 2)',
         defaults: {
             classical: {
                 name: 'Linear Search',
+                authors: null,
                 year: null,
                 runtime: 'n / p',
                 work: 'n',
@@ -82,6 +99,7 @@ export const problemCatalog = [
             },
             quantum: {
                 name: "Grover's Algorithm",
+                authors: 'Grover',
                 year: 1996,
                 runtime: 'sqrt(n)',
                 work: 'sqrt(n) * q',
@@ -95,30 +113,31 @@ export const problemCatalog = [
     {
         problemName: 'Traveling Salesman',
         domain: 'Combinatorics',
-        popularRank: null,
-        aliases: [],
+        aliases: ['TSP'],
         description: null,
         sizeParameter: 'n: number of vertices',
-        qubitToProblemSize: '{q}',
+        qubitsNeeded: 'n',
         defaults: {
             classical: {
                 name: 'Dynamic Programming',
+                authors: 'Held & Karp',
                 year: 1962,
-                runtime: 'n^3 * 2^n / p',
-                work: 'n^3 * 2^n',
+                runtime: 'n^2 * 2^n / p',
+                work: 'n^2 * 2^n',
                 reference: {
                     citation: 'Held, Michael, and Richard M. Karp. "A dynamic programming approach to sequencing problems." Journal of the Society for Industrial and Applied mathematics 10.1 (1962): 196-210.',
                     url: null,
                 },
             },
             quantum: {
-                name: 'Quantum Approximate Optimization Algorithm',
+                name: 'Ambainis et al.',
+                authors: 'Ambainis et al.',
                 year: 2019,
                 runtime: 'n * 1.78^n',
                 work: 'n * 1.78^n * q',
                 reference: {
                     citation: 'A. Ambainis, K. Balodis, J. Iraids, M. Kokainis, K. Prusis, and J. Vihrovs Quantum speedups for exponential-time dynamic programming algorithms Proceedings of the 30th Annual ACM-SIAM Symposium on Discrete Algorithms (SODA 19), pg. 1783-1793, 2019. [arXiv:1807.05209]',
-                    url: null,
+                    url: 'https://arxiv.org/abs/1807.05209',
                 },
             },
         },
@@ -126,14 +145,14 @@ export const problemCatalog = [
     {
         problemName: 'Time Dependent Hartree-Fock Approximation (Quantum Chemistry)',
         domain: null,
-        popularRank: null,
         aliases: [],
         description: null,
         sizeParameter: null,
-        qubitToProblemSize: '{q}',
+        qubitsNeeded: 'n',
         defaults: {
             classical: {
                 name: 'Hartree-Fock Approximation',
+                authors: 'Galvez Vallejo et al.',
                 year: 2023,
                 runtime: 'n^3',
                 work: 'n^3',
@@ -144,6 +163,7 @@ export const problemCatalog = [
             },
             quantum: {
                 name: 'Variational Quantum Eigensolver',
+                authors: 'Babbush et al.',
                 year: 2018,
                 runtime: 'n',
                 work: 'n * q',
@@ -157,14 +177,14 @@ export const problemCatalog = [
     {
         problemName: 'Full Configuration Interaction (Quantum Chemistry)',
         domain: null,
-        popularRank: null,
         aliases: [],
         description: null,
         sizeParameter: null,
-        qubitToProblemSize: '{q}',
+        qubitsNeeded: 'n',
         defaults: {
             classical: {
                 name: 'Full Configuration Interaction',
+                authors: 'Eriksen & Gauss',
                 year: 2021,
                 runtime: '(2 * pi * n)^(1/2) * (n / e)^n',
                 work: '(2 * pi * n)^(1/2) * (n / e)^n',
@@ -175,6 +195,7 @@ export const problemCatalog = [
             },
             quantum: {
                 name: 'Quantum Phase Estimation',
+                authors: 'Sugisaki et al.',
                 year: 2018,
                 runtime: 'n^5',
                 work: 'n^5 * q',
@@ -187,6 +208,32 @@ export const problemCatalog = [
     },
 ];
 
+// A problem generated by the sync, in the same shape as the hand-written ones.
+function fromSheet(p) {
+    const quantumDefault = (algorithmVariants[p.problemName]?.quantum || []).find(a => a.key === p.defaultQuantumKey);
+    return {
+        problemName: p.problemName,
+        domain: p.domain || null,
+        aliases: [],
+        description: null,
+        sizeParameter: p.sizeParameter || null,
+        qubitsNeeded: quantumDefault?.qubitsFormula || 'n',
+        assumptions: p.assumptions || [],
+        noSpeedup: !!p.noSpeedup,
+        fromSheet: true,
+        defaults: {
+            classical: { variantKey: p.defaultClassicalKey },
+            quantum: { variantKey: p.defaultQuantumKey },
+        },
+    };
+}
+
+const handWrittenNames = new Set(handWritten.map(p => p.problemName));
+
+export const problemCatalog = [
+    ...handWritten,
+    ...sheetProblems.filter(p => !handWrittenNames.has(p.problemName)).map(fromSheet),
+];
 
 export function isFormulaValid(formula) {
     if (!formula || typeof formula !== 'string') return false;
@@ -212,23 +259,40 @@ export function findProblem(problemName) {
 function defaultAsVariant(problem, type) {
     const d = problem.defaults?.[type];
     if (!d) return null;
-    if (d.variantName) {
+    if (d.variantKey) {
         const match = (algorithmVariants[problem.problemName]?.[type] || [])
-            .find(a => a.name === d.variantName && hasValidFormulas(a));
-        if (match) return { ...match, year: match.year ?? d.year ?? null, reference: d.reference || null, recommended: true };
+            .find(a => a.key === d.variantKey && hasValidFormulas(a));
+        return match ? { ...match, recommended: true } : null;
     }
     if (!isFormulaValid(d.runtime) || !isFormulaValid(d.work)) return null;
     return {
         key: `default-${type}`,
         name: d.name || 'Calculator preset',
         year: d.year ?? null,
+        authorsLabel: d.authors || null,
         description: 'Best-known algorithm (calculator default)',
         available: true,
         runtimeFormula: d.runtime,
         workFormula: d.work,
+        qubitsFormula: d.qubits || null,
         reference: d.reference || null,
+        url: d.reference?.url || null,
         recommended: true,
     };
+}
+
+// Logical qubits needed for size n with this quantum algorithm.
+export function qubitsNeededFor(problem, quantumAlgorithm) {
+    return quantumAlgorithm?.qubitsFormula || problem?.qubitsNeeded || 'n';
+}
+
+// "Gidney & Ekerå (2019)" and the citation (or paper title), for tooltips.
+export function algorithmCredit(algo) {
+    if (!algo) return '';
+    const who = algo.authorsLabel || null;
+    const byline = who && algo.year ? `${who} (${algo.year})` : who || (algo.year ? String(algo.year) : '');
+    const citation = algo.reference?.citation || algo.title || '';
+    return [byline, citation].filter(Boolean).join('\n');
 }
 
 export function getDefaultAlgorithm(problem, type) {
@@ -249,21 +313,14 @@ export function getAlgorithmOptions(problem, type) {
     return recommended ? [recommended, ...byYear] : byYear;
 }
 
-// Sheet algorithms left out of the picker because their formula can't be
-// evaluated yet (e.g. "poly(n)" or blank).
-export function getHiddenAlgorithmCount(problem, type) {
-    if (!problem) return 0;
-    return (algorithmVariants[problem.problemName]?.[type] || [])
-        .filter(a => !hasValidFormulas(a)).length;
-}
-
 // True when the model's formulas are not the problem's recommended defaults.
 export function isModifiedFromDefaults(problem, model) {
     if (!problem || !model) return false;
     const c = getDefaultAlgorithm(problem, 'classical');
     const q = getDefaultAlgorithm(problem, 'quantum');
     return (!!c && (model.classicalRuntimeInput !== c.runtimeFormula || model.classicalWork !== c.workFormula))
-        || (!!q && (model.quantumRuntimeInput !== q.runtimeFormula || model.quantumWork !== q.workFormula));
+        || (!!q && (model.quantumRuntimeInput !== q.runtimeFormula || model.quantumWork !== q.workFormula))
+        || (!!model.qubitsNeeded && model.qubitsNeeded !== qubitsNeededFor(problem, q));
 }
 
 export function hasQuantumAlgorithm(problem) {
@@ -287,19 +344,14 @@ export function matchesQuery(problem, query) {
         .some(text => text && text.toLowerCase().includes(q));
 }
 
-// Grouped options for the main dropdown: "Popular" first (when any problem has
-// a popularRank), then the remaining problems by domain. Only problems with a
+// Grouped options for the main dropdown, by domain. Only problems with a
 // quantum algorithm are offered.
 export function groupedProblemOptions(query = '') {
     const usable = problemCatalog.filter(p => hasQuantumAlgorithm(p) && matchesQuery(p, query));
-    const popular = usable
-        .filter(p => p.popularRank != null)
-        .sort((a, b) => a.popularRank - b.popularRank)
-        .slice(0, POPULAR_LIMIT);
-    const groups = popular.length ? [{ label: POPULAR_GROUP_LABEL, problems: popular }] : [];
+    const groups = [];
     for (const domain of domainsInUse()) {
         const problems = usable
-            .filter(p => !popular.includes(p) && problemDomain(p) === domain)
+            .filter(p => problemDomain(p) === domain)
             .sort((a, b) => a.problemName.localeCompare(b.problemName));
         if (problems.length) groups.push({ label: domain, problems });
     }

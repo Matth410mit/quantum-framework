@@ -57,16 +57,20 @@ function processDataToGraph(data) {
     const midY = (nCostStar + nStar) / 2;
     const midX = (tStar + tCostStar) / 2;
 
-    const maxY = (midY === 0)
+    // With no advantage in range (e.g. no known quantum speedup) the stars are
+    // not finite, so the axes fall back to the data's own extent.
+    const maxY = (midY === 0 || !Number.isFinite(midY))
         ? Math.min(...[data.quantumAdvantage, data.quantumCostAdvantage, data.quantumFeasible]
             .filter(arr => Array.isArray(arr) && arr.length)
-            .map(arr => Math.max(...arr.map(step => step[1]))), 100)
+            .map(arr => Math.max(...arr.map(step => step[1])))
+            .filter(Number.isFinite), 100)
         : midY * 2;
 
-    const maxX = (midX === 0)
+    const maxX = (midX === 0 || !Number.isFinite(midX))
         ? Math.min(...[data.quantumAdvantage, data.quantumCostAdvantage, data.quantumFeasible]
             .filter(arr => Array.isArray(arr) && arr.length)
-            .map(arr => Math.max(...arr.map(step => step[0]))), new Date().getFullYear() + 5)
+            .map(arr => Math.max(...arr.map(step => step[0])))
+            .filter(Number.isFinite), new Date().getFullYear() + 5)
         : midX + (midX - currentYear);
 
     let quantumAdvantage = data.quantumAdvantage.filter(step => step[0] <= maxX && step[1] <= maxY);
@@ -404,8 +408,8 @@ function updateGraph() {
                         return '<div style="text-align: center;">Max Qubits<br>(no time cap)</div>';
                     }
                 },
-                x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
-                y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
+                x: data.quantumFeasible.at(-1)?.[0],
+                y: data.quantumFeasible.at(-1)?.[1],
             })],
             color: 'green',
             dashStyle: 'dash',
@@ -437,8 +441,8 @@ function updateGraph() {
                         return '<div style="text-align: center;">Quantum<br>Feasibility<br>(time-capped)</div>';
                     }
                 },
-                x: data.quantumFeasibleCapped[data.quantumFeasibleCapped.length - 1][0],
-                y: data.quantumFeasibleCapped[data.quantumFeasibleCapped.length - 1][1],
+                x: data.quantumFeasibleCapped.at(-1)?.[0],
+                y: data.quantumFeasibleCapped.at(-1)?.[1],
             })],
             color: 'darkred',
             dashStyle: 'solid',
@@ -477,8 +481,8 @@ function updateGraph() {
                         return '<div style="text-align: center;">Quantum<br>Feasibility</div>';
                     }
                 },
-                x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
-                y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
+                x: data.quantumFeasible.at(-1)?.[0],
+                y: data.quantumFeasible.at(-1)?.[1],
             })],
             color: 'darkred',
             dashStyle: 'dash',
@@ -519,8 +523,8 @@ function updateGraph() {
                         return '<div style="text-align: cnter;">Speed<br/>Advantage</div>';
                     }
                 },
-                x: data.quantumAdvantage[data.quantumAdvantage.length - 1][0],
-                y: data.quantumAdvantage[data.quantumAdvantage.length - 1][1],
+                x: data.quantumAdvantage.at(-1)?.[0],
+                y: data.quantumAdvantage.at(-1)?.[1],
             })],
             color: 'rgba(0,45,157,1)',
             dashStyle: 'dash',
@@ -561,8 +565,8 @@ function updateGraph() {
                         return '<div style="text-align: cnter;">Cost<br/>Advantage</div>';
                     }
                 },
-                x: data.quantumCostAdvantage[data.quantumCostAdvantage.length - 1][0],
-                y: data.quantumCostAdvantage[data.quantumCostAdvantage.length - 1][1],
+                x: data.quantumCostAdvantage.at(-1)?.[0],
+                y: data.quantumCostAdvantage.at(-1)?.[1],
             })],
             color: 'rgba(48,158,244,1)',
             dashStyle: 'dash',
