@@ -53,15 +53,28 @@ Code: `src/store/hardwares.js` (the list and its storage),
 
 ## Roadmap notation
 
-The Edit roadmap chart and the Quantum Timelines chart draw roadmaps the same
-way (`src/store/roadmapNotation.js`):
+The calculator's graphs (Edit roadmap, Quantum Timelines, Quantum Economic
+Advantage) and the comparison draw roadmaps the same way
+(`src/store/roadmapNotation.js`):
 
 - **Filled dot:** demonstrated, a machine that exists.
 - **Hollow dot:** projected, on the vendor's roadmap.
-- **Solid line:** between roadmap points.
-- **Dashed line:** extrapolated outside the roadmap.
+- **Solid line:** within the roadmap.
+- **Faded line:** extrapolated past the last roadmap point (or before the
+  first). On graphs of one hardware, those years also have a grey "Beyond
+  roadmap" background.
 - **Colour:** physical qubits light red, logical qubits dark red.
 - **Labels:** counts as powers of ten (10^4), years as whole years.
+
+Dashes are not used for projections, so that in the comparison they can
+mark the vendor. The Quantum Economic Advantage graph's lines used to be
+dashed before the QEA year; they are solid now, and the shaded area shows
+where quantum wins. Its time-capped view draws the uncapped feasibility as
+a thin green line instead of a dashed one.
+
+In the comparison, each line fades after its own hardware's last roadmap
+year. A QEA year after that point is a hollow dot, is marked "beyond
+roadmap" in the table, and rests on the extrapolation.
 
 A roadmap counted in logical qubits has no physical qubits line in Quantum
 Timelines. It used to draw its logical counts as a "Physical Qubits" line.

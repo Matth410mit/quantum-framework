@@ -14,6 +14,7 @@ import { useHardwaresStore } from '../store/hardwares'
 import { findProblem } from '../store/problemCatalog'
 import { compareHardwareOverTime, technologyLabel, TECHNOLOGY_ORDER, YEARS_SHOWN } from '../store/hardwareComparison'
 import { nameWithoutTechnology } from '../store/technology'
+import { fadedColor } from '../store/roadmapNotation'
 
 const props = defineProps({
     // The problem and algorithms; each line applies one hardware to a copy.
@@ -148,6 +149,11 @@ function formatQea(year) {
     return year.toFixed(1)
 }
 
+// True when year is past the last point of the line's hardware roadmap.
+function beyondRoadmap(line, year) {
+    return line.roadmapEnd !== null && line.roadmapEnd !== undefined && year > line.roadmapEnd
+}
+
 // The legend's QEA wording.
 function legendQea(year) {
     if (year === null || year === undefined) return 'QEA could not be calculated'
@@ -253,9 +259,12 @@ const chartOptions = computed(() => {
         const style = lineStyles.value.get(line.index)
         const { values, qea } = line[key]
         const points = data.years.map((year, i) => ({ x: year, y: values[i] }))
-        // Mark the QEA year on the line.
+        // Mark the QEA year on the line: filled within the hardware's roadmap,
+        // hollow when it rests on extrapolation (as projected roadmap points).
         if (Number.isFinite(qea) && qea <= lastYear) {
-            const marker = { enabled: true, radius: 5, fillColor: style.color, lineColor: '#ffffff', lineWidth: 2, symbol: 'circle' }
+            const marker = beyondRoadmap(line, qea)
+                ? { enabled: true, radius: 4, fillColor: '#ffffff', lineColor: style.color, lineWidth: 2, symbol: 'circle' }
+                : { enabled: true, radius: 5, fillColor: style.color, lineColor: '#ffffff', lineWidth: 2, symbol: 'circle' }
             if (qea <= currentYear) {
                 if (points[0].y !== null) points[0] = { ...points[0], marker, qea: true }
             } else {
@@ -270,6 +279,9 @@ const chartOptions = computed(() => {
             color: style.color,
             dashStyle: style.dashStyle,
             lineWidth: style.width,
+            // Faded past the hardware's last roadmap year.
+            zoneAxis: 'x',
+            zones: line.roadmapEnd === null ? [] : [{ value: line.roadmapEnd }, { color: fadedColor(style.color) }],
             data: points,
             connectNulls: false,
             marker: { enabled: false, symbol: 'circle', states: { hover: { enabled: false } } },
@@ -354,10 +366,11 @@ const chartOptions = computed(() => {
                     .map(p => {
                         const line = data.lines[p.series.userOptions.lineIndex]
                         const algorithm = common === null ? `<div style="color:${MUTED};font-size:10px">${escapeHtml(algorithmLabel(data.candidates[line[key].algorithm]))}</div>` : ''
+                        const extrapolated = beyondRoadmap(line, p.x) ? `<div style="color:${MUTED};font-size:10px">Beyond its roadmap (${line.roadmapEnd})</div>` : ''
                         return `<div style="display:flex;align-items:flex-start;gap:6px;margin-top:2px">`
                             + `<span style="display:inline-block;width:14px;margin-top:7px;border-top:2px ${borderStyle(p.series.options.dashStyle)} ${p.series.color}"></span>`
                             + `<div style="flex:1"><div style="display:flex;justify-content:space-between;gap:12px"><span>${escapeHtml(p.series.name)}</span>`
-                            + `<span style="font-weight:600">${utils.toBase10HTML(p.y)}×</span></div>${algorithm}</div></div>`
+                            + `<span style="font-weight:600">${utils.toBase10HTML(p.y)}×</span></div>${extrapolated}${algorithm}</div></div>`
                     }).join('')
                 const header = common !== null
                     ? `<div style="color:${MUTED};margin-bottom:4px">${escapeHtml(algorithmLabel(data.candidates[common]))} ${tex(data.candidates[common].tex)}</div>`
@@ -398,7 +411,7 @@ const tableRows = computed(() => {
             technology: technologyLabel(line.technology),
             algorithm: algorithmLabel(candidate),
             complexity: candidate ? tex(candidate.tex) : '',
-            qea: formatQea(entry.qea),
+            qea: formatQea(entry.qea) + (Number.isFinite(entry.qea) && beyondRoadmap(line, entry.qea) ? ' (beyond roadmap)' : ''),
         }
     })
 })
@@ -456,6 +469,7 @@ const tableRows = computed(() => {
             <div>
                 Above 1×, the hardware can run problems bigger than the smallest one where quantum is
                 {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical. Dots mark each hardware's QEA year.
+                Lines fade after the hardware's roadmap ends, and a hollow dot is a QEA year past that point.
             </div>
             <div>Compared with {{ classicalKey ? '' : 'the fastest classical algorithm:' }} <span v-html="classicalHtml"></span></div>
         </div>

@@ -7,6 +7,13 @@ highchartsMore(Highcharts);
 import { Chart } from 'highcharts-vue'
 import { ref, defineProps, watch } from 'vue';
 import * as utils from "../store/utils"
+import { extrapolationZones, beyondRoadmapBands, yearTickInterval } from '../store/roadmapNotation'
+
+// Lines are solid; past the last roadmap point the roadmap-based lines fade
+// and the background is shaded (store/roadmapNotation.js). Dashes are left
+// for the hardware comparison's vendors.
+const FEASIBILITY_COLOR = '#8b0000' // darkred
+const UNCAPPED_COLOR = '#008000'    // green
 
 const currentYear = new Date().getFullYear();
 
@@ -115,6 +122,7 @@ function processDataToGraph(data) {
 
     return {
         graphTitle,
+        roadmap: data.roadmap,
         quantumAdvantage,
         quantumCostAdvantage,
         quantumFeasible,
@@ -269,13 +277,21 @@ function updateGraph() {
     const currentYear = new Date().getFullYear()
     const lastYear = data.maxX
     const mid = parseInt((data.maxX - currentYear) / 2) + currentYear
-    chartOptions.xAxis.tickPositions = [
-        currentYear,
-        (currentYear + mid) / 2,
-        mid,
-        (mid + lastYear) / 2,
-        lastYear
-    ]
+    // Whole years when the range allows, as in the roadmap charts.
+    if (lastYear - currentYear > 3) {
+        chartOptions.xAxis.tickPositions = undefined
+        chartOptions.xAxis.tickInterval = yearTickInterval(lastYear - currentYear)
+    } else {
+        chartOptions.xAxis.tickInterval = undefined
+        chartOptions.xAxis.tickPositions = [
+            currentYear,
+            (currentYear + mid) / 2,
+            mid,
+            (mid + lastYear) / 2,
+            lastYear
+        ]
+    }
+    chartOptions.xAxis.plotBands = beyondRoadmapBands(data.roadmap)
     chartOptions.xAxis.labels = {
         useHTML: true,
         formatter: function () {
@@ -385,7 +401,7 @@ function updateGraph() {
 
     // feasibility lines
     if (data.hasTimeCap && data.quantumFeasibleCapped) {
-        // When time cap is active: show uncapped as dashed green, capped as solid blue
+        // When time cap is active: show uncapped as a thin green line, capped as the usual one
         series.push({
             name: 'Max Qubits',
             data: [...data.quantumFeasible, ({
@@ -411,8 +427,10 @@ function updateGraph() {
                 x: data.quantumFeasible.at(-1)?.[0],
                 y: data.quantumFeasible.at(-1)?.[1],
             })],
-            color: 'green',
-            dashStyle: 'dash',
+            color: UNCAPPED_COLOR,
+            lineWidth: 1,
+            zoneAxis: 'x',
+            zones: extrapolationZones(data.roadmap, UNCAPPED_COLOR),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -444,14 +462,9 @@ function updateGraph() {
                 x: data.quantumFeasibleCapped.at(-1)?.[0],
                 y: data.quantumFeasibleCapped.at(-1)?.[1],
             })],
-            color: 'darkred',
-            dashStyle: 'solid',
+            color: FEASIBILITY_COLOR,
             zoneAxis: 'x',
-            zones: [{
-                value: data.tStar,
-            }, {
-                dashStyle: 'solid'
-            }],
+            zones: extrapolationZones(data.roadmap, FEASIBILITY_COLOR),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -484,14 +497,9 @@ function updateGraph() {
                 x: data.quantumFeasible.at(-1)?.[0],
                 y: data.quantumFeasible.at(-1)?.[1],
             })],
-            color: 'darkred',
-            dashStyle: 'dash',
+            color: FEASIBILITY_COLOR,
             zoneAxis: 'x',
-            zones: [{
-                value: data.tStar,
-            }, {
-                dashStyle: 'solid'
-            }],
+            zones: extrapolationZones(data.roadmap, FEASIBILITY_COLOR),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -527,13 +535,6 @@ function updateGraph() {
                 y: data.quantumAdvantage.at(-1)?.[1],
             })],
             color: 'rgba(0,45,157,1)',
-            dashStyle: 'dash',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.tStar,
-            }, {
-                dashStyle: 'solid'
-            }],
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -569,13 +570,6 @@ function updateGraph() {
                 y: data.quantumCostAdvantage.at(-1)?.[1],
             })],
             color: 'rgba(48,158,244,1)',
-            dashStyle: 'dash',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.tCostStar,
-            }, {
-                dashStyle: 'solid'
-            }],
             marker: {
                 enabled: false,
                 symbol: 'circle'

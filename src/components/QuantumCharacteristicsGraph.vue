@@ -10,9 +10,11 @@ import { ref, defineProps, watch } from 'vue';
 import * as utils from "../store/utils"
 import {
     QUBIT_COLORS, qubitColor, qubitUnitLabel, roadmapPointSeries, extrapolatedLegendSeries, extrapolationZones,
+    beyondRoadmapBands, yearTickInterval,
 } from '../store/roadmapNotation'
 
 const currentYear = new Date().getFullYear();
+const PROBLEM_SIZE_COLOR = '#8b0000' // darkred
 
 const props = defineProps({
     data: Object,
@@ -41,10 +43,9 @@ function processDataToGraph(data) {
 
     const maxY = Math.max(...problemSize.map(point => point[1]), ...logicalQubits.map(point => point[1]), ...physicalQubits.map(point => point[1]))
 
-    const lastRoadmapPoint = Math.max(...Object.keys(data.roadmap).map(Number));
 
     return {
-        problemSize, logicalQubits, tStar, nStar, tCostStar, nCostStar, maxY, maxX, lastRoadmapPoint, physicalQubits,
+        problemSize, logicalQubits, tStar, nStar, tCostStar, nCostStar, maxY, maxX, physicalQubits,
         roadmap: data.roadmap, dataPointTypes: data.dataPointTypes || {}, roadmapUnit,
     }
 }
@@ -145,16 +146,6 @@ const chartOptions = {
                     color: 'rgba(48,158,244,1)'
                 }
             }
-        }, {
-            value: data.lastRoadmapPoint,
-            color: '#6B7280',
-            width: 2,
-            label: {
-                text: 'Last Roadmap Data',
-                style: {
-                    color: '#6B7280'
-                }
-            }
         },
         ]
     },
@@ -231,7 +222,7 @@ function updateGraph() {
     // roadmap point sits on its year's tick.
     if (lastYear - currentYear > 3) {
         chartOptions.xAxis.tickPositions = undefined
-        chartOptions.xAxis.tickInterval = lastYear - currentYear > 12 ? 2 : 1
+        chartOptions.xAxis.tickInterval = yearTickInterval(lastYear - currentYear)
     } else {
         chartOptions.xAxis.tickInterval = undefined
         chartOptions.xAxis.tickPositions = [
@@ -282,19 +273,11 @@ function updateGraph() {
                 color: 'rgba(48,158,244,1)'
             }
         }
-    }, {
-        value: data.lastRoadmapPoint,
-        color: '#6B7280',
-        width: 2,
-        label: {
-            rotation: 0,
-            text: 'Last Roadmap<br> Data',
-            style: {
-                color: '#6B7280'
-            }
-        }
     },
     ]
+    // The years past the last roadmap point are shaded (and the lines faded)
+    // instead of marked with a line.
+    chartOptions.xAxis.plotBands = beyondRoadmapBands(data.roadmap)
 
 
 
@@ -320,15 +303,13 @@ function updateGraph() {
         }]
     }
 
-    const zones = extrapolationZones(data.roadmap)
     function lineSeries(name, points, color) {
         return {
             name,
             data: withEndLabel(points, name, color),
             color,
-            dashStyle: 'solid',
             zoneAxis: 'x',
-            zones,
+            zones: extrapolationZones(data.roadmap, color),
             marker: { enabled: false, symbol: 'circle' },
         }
     }
@@ -336,7 +317,7 @@ function updateGraph() {
     chartOptions.series = [
         lineSeries(qubitUnitLabel('logical'), data.logicalQubits, QUBIT_COLORS.logical),
         ...(data.physicalQubits.length ? [lineSeries(qubitUnitLabel('physical'), data.physicalQubits, QUBIT_COLORS.physical)] : []),
-        lineSeries('Problem size', data.problemSize, 'darkred'),
+        lineSeries('Problem size', data.problemSize, PROBLEM_SIZE_COLOR),
         // The roadmap's own points, on the qubit line they count.
         ...roadmapPointSeries(data.roadmap, data.dataPointTypes, qubitColor(data.roadmapUnit)),
         extrapolatedLegendSeries(),

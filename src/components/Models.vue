@@ -399,6 +399,7 @@ function calculateQuantumEconomicAdvantage(model) {
     quantumEconomicAdvantageData.value = {
         ...quantumEconomicAdvantageDataAux,
         problemName: model.problemName,
+        roadmap: model.roadmap,
     }
 
     roadmapCharacteristicsData.value = {

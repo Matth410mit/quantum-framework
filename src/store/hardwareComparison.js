@@ -29,6 +29,7 @@ import { quantumEconomicAdvantage } from './qea';
 import { SHEET_PROBLEMS } from './sheetSync/problems.config';
 import { variationKey, variationKeys } from './sheetSync/variations';
 import { hardwareTechnology } from './technology';
+import { roadmapSpan } from './roadmapNotation';
 
 export { hardwareTechnology, technologyLabel, TECHNOLOGY_ORDER } from './technology';
 
@@ -298,7 +299,7 @@ function bestOf(series) {
  * Everything the graph needs, or null when the problem has no quantum
  * algorithm or no usable classical one.
  *   years: [year...] (twice a year, this year to YEARS_SHOWN years out)
- *   lines: [{ name, technology, basedOn, speed, cost }], one per hardware,
+ *   lines: [{ name, technology, basedOn, roadmapEnd, speed, cost }], one per hardware,
  *     where speed and cost are { algorithm (candidate index),
  *     values: [headroom | null], qea: year | Infinity | null }
  *   candidates: [{ key, name, authors, year, tex, custom }]
@@ -330,6 +331,8 @@ export function compareHardwareOverTime(model, problem, hardwares, { quantumKey 
             name: hardware.hardwareName,
             technology: hardwareTechnology(hardware),
             basedOn: hardware.basedOn || null,
+            // The last roadmap year; later values are extrapolated.
+            roadmapEnd: roadmapSpan(hardware.roadmap)?.[1] ?? null,
             speed: bestOf(series.map(s => s.speed)),
             cost: bestOf(series.map(s => s.cost)),
         };
