@@ -22,7 +22,7 @@ export const MODALITIES = [
   'other',
 ];
 
-// Display names used by hardware preset names, e.g. "IBM (Superconducting)".
+// Display names used by hardware preset names, e.g. "IBM 2025 (Superconducting)".
 export const MODALITY_LABELS = {
   superconducting: 'Superconducting',
   'trapped-ion': 'Trapped Ion',

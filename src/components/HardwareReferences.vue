@@ -26,12 +26,6 @@
 
 const references = [
     {
-        hardwareName: "IBM (Superconducting)",
-        year: 2024,
-        link: "https://www.ibm.com/roadmaps/quantum/2024/",
-
-    },
-    {
         hardwareName: "IBM 2025 (Superconducting)",
         year: 2025,
         link: "https://www.ibm.com/quantum/hardware#roadmap",
@@ -80,10 +74,5 @@ const references = [
         year: 2026,
 
     },
-    {
-        hardwareName: "Quantum Silicon (Semiconductors)",
-        link: "https://www.eetimes.eu/cea-leti-details-silicon-based-quantum-computing-roadmap/",
-        year: 2024,
-    }
 ]
 </script>

@@ -14,23 +14,23 @@ const modelTemplate = {
     penaltyInput: "sqrt(q)",
     // logical qubits needed for a problem of size n
     qubitsNeeded: "3 * n + 0.002 * n * log(n, 2)",
-    hardwareName: 'IBM (Superconducting)',
+    // Same as the IBM 2025 (Superconducting) preset in hardwares.js
+    hardwareName: 'IBM 2025 (Superconducting)',
     roadmap: {
-        2020: 27,
-        // 2022: 127,
-        2024: 133,
+        2024: 156,
         2025: 156,
-        // 2029: 200,
-        // 2033: 2000,
-        2028: 1092,
-        // 2029: 22974,
-        // 2033: 100000
+        2026: 360,
+        2028: 1080,
+        2029: 10000,
+        2033: 100000,
     },
     dataPointTypes: {
-        2020: 'demonstrated',
         2024: 'demonstrated',
         2025: 'demonstrated',
+        2026: 'projected',
         2028: 'projected',
+        2029: 'projected',
+        2033: 'projected',
     },
     roadmapUnit: "physical",
     extrapolationType: 'exponential',

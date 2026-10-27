@@ -17,13 +17,6 @@ const defaultAdvancedSlowdown = {
     neutralAtom: { gateTime: 250, cpuGHz: 5, speed: 1250, gateOverhead: 100, algorithmConstant: 1 },
 };
 
-const ibm2024Roadmap = {
-    2020: 27,
-    2024: 133,
-    2025: 156,
-    2028: 1092,
-};
-
 // 2026: up to three 120-qubit Nighthawk modules (IBM roadmap). 2029 and 2033
 // are estimates: IBM gives Starling (200 logical) as "1000s" of physical
 // qubits and Blue Jay (2,000 logical) as about 10x that.
@@ -54,24 +47,6 @@ const quantinuumRoadmap = {
 
 // provenance: who published the roadmap numbers (see roadmapSchema.js PROVENANCES).
 const initialPresets = [
-    {
-        hardwareName: "IBM (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 264,
-        ratioImprovementRate: -23,
-        roadmap: ibm2024Roadmap,
-        dataPointTypes: typesByYear(ibm2024Roadmap),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.superconducting,
-        reference: "https://www.ibm.com/roadmaps/quantum.pdf",
-        provenance: "vendor-published",
-    },
     {
         hardwareName: "IBM 2025 (Superconducting)",
         penaltyInput: "sqrt(q)",
@@ -260,29 +235,6 @@ const initialPresets = [
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
         reference: "https://thequantuminsider.com/2026/09/24/infleqtion-achieves-30-entangled-logical-qubits-on-its-sqale-quantum-computer/",
-        provenance: "third-party",
-    },
-    {
-        hardwareName: "Quantum Silicon (Semiconductors)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2018: 1,
-            2021: 6,
-            2024: 100,
-        },
-        // 2024: 100 was a CEA-Leti projection; no 100-qubit silicon chip was shown.
-        dataPointTypes: typesByYear({ 2018: 1, 2021: 6, 2024: 100 }, 2021),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
-        reference: "https://www.eetimes.eu/cea-leti-details-silicon-based-quantum-computing-roadmap/",
         provenance: "third-party",
     },
 ];
