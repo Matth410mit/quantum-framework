@@ -2,14 +2,14 @@
 <script setup>
 // The Edit roadmap chart. Same notation as Quantum Timelines
 // (store/roadmapNotation.js): filled dots demonstrated, hollow dots projected,
-// faded line and grey band outside the roadmap, colour by physical or logical
-// qubits.
+// line faded within the roadmap and bold outside it, grey band past it,
+// colour by physical or logical qubits.
 import { Chart } from 'highcharts-vue'
 import { computed } from 'vue';
 import * as utils from "../store/utils"
 import {
-    qubitColor, qubitUnitLabel, roadmapPoints, roadmapPointSeries, extrapolatedLegendSeries,
-    extrapolationZones, beyondRoadmapBands, yearKind,
+    qubitColor, qubitUnitLabel, roadmapPoints, roadmapPointSeries, withinRoadmapLegendSeries,
+    roadmapZones, beyondRoadmapBands, yearKind,
 } from '../store/roadmapNotation'
 
 const currentYear = new Date().getFullYear();
@@ -88,11 +88,11 @@ const chartOptions = computed(() => {
                 color,
                 lineWidth: 2,
                 zoneAxis: 'x',
-                zones: extrapolationZones(props.data, color),
+                zones: roadmapZones(props.data, color),
                 marker: { enabled: false, states: { hover: { enabled: true } } },
             },
             ...roadmapPointSeries(props.data, props.dataPointTypes, color),
-            extrapolatedLegendSeries(),
+            withinRoadmapLegendSeries(),
         ],
     };
 });

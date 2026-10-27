@@ -5,9 +5,10 @@ over time on one problem.
 
 - **Problem:** starts on the calculator's first problem and follows it until a
   problem is picked on this page.
-- **Quantum algorithm:** "Best for each hardware" (the default) or one
-  algorithm used on every hardware.
-- **Classical algorithm:** "Fastest classical" (the default) or one algorithm.
+- **Quantum algorithm:** one algorithm, used on every hardware. It starts on
+  the recommended one, which is listed first and marked "Recommended".
+- **Classical algorithm:** starts on the recommended one (the fastest
+  classical algorithm), also listed first and marked.
 - **Hardware:** a checkbox list grouped by technology, all ticked to start,
   with Select all and Clear. Clicking a legend entry unticks that hardware.
 - **Speed / Cost:** whether "beats classical" means faster (runtime with the
@@ -59,10 +60,10 @@ Advantage) and the comparison draw roadmaps the same way
 
 - **Filled dot:** demonstrated, a machine that exists.
 - **Hollow dot:** projected, on the vendor's roadmap.
-- **Solid line:** within the roadmap.
-- **Faded line:** extrapolated past the last roadmap point (or before the
-  first). On graphs of one hardware, those years also have a grey "Beyond
-  roadmap" background.
+- **Faded line:** within the roadmap, from its first to its last point.
+- **Full-colour line:** extrapolated past the last roadmap point (or before
+  the first). On graphs of one hardware, the years past the roadmap also
+  have a grey "Beyond roadmap" background.
 - **Colour:** physical qubits light red, logical qubits dark red.
 - **Labels:** counts as powers of ten (10^4), years as whole years.
 
@@ -72,9 +73,10 @@ dashed before the QEA year; they are solid now, and the shaded area shows
 where quantum wins. Its time-capped view draws the uncapped feasibility as
 a thin green line instead of a dashed one.
 
-In the comparison, each line fades after its own hardware's last roadmap
-year. A QEA year after that point is a hollow dot, is marked "beyond
-roadmap" in the table, and rests on the extrapolation.
+In the comparison, each line is faded until its own hardware's last
+roadmap year and full colour after it. A QEA year after that point is a
+hollow dot, is marked "beyond roadmap" in the table, and rests on the
+extrapolation.
 
 A roadmap counted in logical qubits has no physical qubits line in Quantum
 Timelines. It used to draw its logical counts as a "Physical Qubits" line.
@@ -100,13 +102,19 @@ where n = 2^qubits) leave the top of the plot.
 
 These are kept out of the UI on purpose.
 
-- **One algorithm per hardware:** the quantum algorithm that reaches QEA first
-  on that hardware. If none does, it's the one with the most headroom at the
-  end of the period. Picking the best algorithm year by year was checked for
-  every problem, preset, speed and cost (198 cases). It changes in two:
-  String Search on IonQ and Quantinuum around 2040, where two algorithms are
-  within 0.03 orders of magnitude of each other, far below 1×. So it would
-  draw the same lines.
+- **One quantum algorithm for every hardware:** the recommended one is the
+  algorithm that does best on the most hardware, counting speed and cost
+  separately. Doing best on a hardware means reaching QEA first, or if none
+  does, having the most headroom at the end of the period. Ties go to the
+  calculator's default, then the newest. On the presets, the best algorithm
+  is the same on every hardware for 19 of 21 problems. The exceptions are
+  Shortest Path and String Search. It matches the calculator's default in 18
+  of 21; the third exception is Integer Factorization, where Brenner et al.
+  (2025) wins (see Known limitations). Picking the best algorithm year by
+  year was checked for every problem, preset, speed and cost (198 cases). It
+  changes in two: String Search on IonQ and Quantinuum around 2040, where
+  two algorithms are within 0.03 orders of magnitude of each other, far
+  below 1×.
 - **Same version of the problem on both sides:** candidates on both sides are
   limited to the problem's own Variation or the general problem. Variations
   are compared by meaning, as the sheet sync does
@@ -119,8 +127,10 @@ These are kept out of the UI on purpose.
   can evaluate, minus approximate and heuristic-based ones. The calculator's
   default is always included. These are also the choices in the Quantum
   algorithm dropdown.
-- **Classical baseline:** "Fastest classical" is the single classical
-  algorithm whose runtime grows slowest as n grows (with p = 1). The pool is
+- **Classical baseline:** the recommended one is the single classical
+  algorithm whose runtime grows slowest as n grows (with p = 1). It matches
+  the calculator's default in 19 of 21 problems (not Minimum Spanning Tree
+  or Shortest Path). The pool is
   the problem's classical algorithms minus approximate, heuristic-based and
   parallel ones (so special cases such as planar graphs or non-comparison
   sorts don't win). The default is always included. The Classical algorithm

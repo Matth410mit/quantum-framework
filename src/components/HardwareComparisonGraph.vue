@@ -27,7 +27,8 @@ const props = defineProps({
     // Names of the hardware not drawn.
     hidden: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['update:mode', 'update:hidden'])
+// recommended: the recommended quantum algorithm's key, once calculated.
+const emit = defineEmits(['update:mode', 'update:hidden', 'recommended'])
 
 const hardwaresStore = useHardwaresStore()
 const currentYear = new Date().getFullYear()
@@ -120,6 +121,10 @@ watch(() => [props.model, props.quantumKey, props.classicalKey, hardwaresStore.a
     }
     debounce = setTimeout(recalculate, 300)
 }, { immediate: true, deep: true })
+
+watch(result, value => {
+    if (value) emit('recommended', value.recommendedKey)
+})
 
 onBeforeUnmount(() => {
     clearTimeout(debounce)
@@ -237,6 +242,13 @@ const sameAlgorithmEverywhere = computed(() => {
     return lines.every(line => line[mode.value].algorithm === first) ? first : null
 })
 
+// Every line uses the same quantum algorithm.
+const quantumHtml = computed(() => {
+    const data = result.value
+    const candidate = data?.candidates[data.lines[0]?.speed.algorithm]
+    return candidate ? `${escapeHtml(candidate.name)} ${tex(candidate.tex)}` : ''
+})
+
 const classicalHtml = computed(() => {
     const c = result.value?.classical
     return c ? `${escapeHtml(c.name)} ${tex(c.tex)}` : ''
@@ -279,9 +291,9 @@ const chartOptions = computed(() => {
             color: style.color,
             dashStyle: style.dashStyle,
             lineWidth: style.width,
-            // Faded past the hardware's last roadmap year.
+            // Faded up to the hardware's last roadmap year, bold after it.
             zoneAxis: 'x',
-            zones: line.roadmapEnd === null ? [] : [{ value: line.roadmapEnd }, { color: fadedColor(style.color) }],
+            zones: line.roadmapEnd === null ? [] : [{ value: line.roadmapEnd, color: fadedColor(style.color) }, {}],
             data: points,
             connectNulls: false,
             marker: { enabled: false, symbol: 'circle', states: { hover: { enabled: false } } },
@@ -421,7 +433,7 @@ const tableRows = computed(() => {
     <div class="py-2">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
             <div class="text-sm text-gray-700">
-                When each hardware reaches quantum economic advantage{{ quantumKey ? '' : ', using its best quantum algorithm' }}
+                When each hardware reaches quantum economic advantage
             </div>
             <div class="flex items-center gap-3">
                 <span v-if="loading" class="text-xs text-gray-500">Calculating…</span>
@@ -469,9 +481,9 @@ const tableRows = computed(() => {
             <div>
                 Above 1×, the hardware can run problems bigger than the smallest one where quantum is
                 {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical. Dots mark each hardware's QEA year.
-                Lines fade after the hardware's roadmap ends, and a hollow dot is a QEA year past that point.
+                Lines are faded until the hardware's roadmap ends and bold after it. A hollow dot is a QEA year past the roadmap.
             </div>
-            <div>Compared with {{ classicalKey ? '' : 'the fastest classical algorithm:' }} <span v-html="classicalHtml"></span></div>
+            <div>Quantum: <span v-html="quantumHtml"></span> · Classical: <span v-html="classicalHtml"></span></div>
         </div>
 
         <div v-if="result && hasValues" :class="['transition-opacity', loading ? 'opacity-60' : '']">

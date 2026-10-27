@@ -2,11 +2,11 @@
 // The hardware comparison page: one problem, every hardware. The choices live
 // in store/comparison.js so they survive switching pages and go into links.
 import Multiselect from 'vue-multiselect'
-import { computed, defineAsyncComponent, ref } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import ProblemPicker from './ProblemPicker.vue'
 import { useComparisonStore } from '../store/comparison'
 import { algorithmCredit, findProblem } from '../store/problemCatalog'
-import { classicalCandidates, quantumCandidates } from '../store/hardwareComparison'
+import { classicalCandidates, fastestClassical, quantumCandidates } from '../store/hardwareComparison'
 
 const HardwareComparisonGraph = defineAsyncComponent(() => import('./HardwareComparisonGraph.vue'))
 
@@ -17,44 +17,39 @@ const problem = computed({
     set: value => comparison.setProblem(value.problemName),
 })
 
-const AUTO = '__auto__'
+// The recommended algorithms are the defaults: on the quantum side the one
+// that does best on the most hardware (found by the graph's calculation), on
+// the classical side the one whose runtime grows slowest.
+const recommendedQuantumKey = ref(null)
+watch(() => [comparison.problemName, comparison.classicalKey], () => { recommendedQuantumKey.value = null })
 
-// The automatic choice first, then the algorithms the graph can use.
-function algorithmOptions(candidates, autoName, autoDescription) {
-    return [
-        { key: AUTO, name: autoName, description: autoDescription, auto: true },
-        ...candidates.filter(a => a.key),
-    ]
+const recommendedClassicalKey = computed(() =>
+    problem.value ? fastestClassical(problem.value, comparison.model)?.key || null : null)
+
+// The recommended algorithm first, marked; then the rest in the calculator's order.
+function algorithmOptions(candidates, recommendedKey) {
+    const options = candidates.filter(a => a.key).map(a => ({ ...a, recommended: a.key === recommendedKey }))
+    return [...options.filter(a => a.recommended), ...options.filter(a => !a.recommended)]
 }
 
 const quantumOptions = computed(() => algorithmOptions(
-    problem.value ? quantumCandidates(problem.value, comparison.model) : [],
-    'Best for each hardware',
-    'The algorithm that reaches QEA first on each hardware',
-))
+    problem.value ? quantumCandidates(problem.value, comparison.model) : [], recommendedQuantumKey.value))
 
 const classicalOptions = computed(() => algorithmOptions(
-    problem.value ? classicalCandidates(problem.value, comparison.model) : [],
-    'Fastest classical',
-    'The classical algorithm with the slowest-growing runtime',
-))
+    problem.value ? classicalCandidates(problem.value, comparison.model) : [], recommendedClassicalKey.value))
 
-function selectedOption(options, key) {
-    return options.find(o => o.key === key) || options[0]
+// The store keeps null for "the recommended one", which keeps links short.
+function algorithmModel(options, key, recommendedKey) {
+    return computed({
+        get: () => options.value.find(o => o.key === (comparison[key] || recommendedKey.value)) || null,
+        set: value => { comparison[key] = !value || value.key === recommendedKey.value ? null : value.key },
+    })
 }
 
-const quantumAlgorithm = computed({
-    get: () => selectedOption(quantumOptions.value, comparison.quantumKey),
-    set: value => { comparison.quantumKey = value?.auto ? null : value?.key || null },
-})
-
-const classicalAlgorithm = computed({
-    get: () => selectedOption(classicalOptions.value, comparison.classicalKey),
-    set: value => { comparison.classicalKey = value?.auto ? null : value?.key || null },
-})
+const quantumAlgorithm = algorithmModel(quantumOptions, 'quantumKey', recommendedQuantumKey)
+const classicalAlgorithm = algorithmModel(classicalOptions, 'classicalKey', recommendedClassicalKey)
 
 function byline(option) {
-    if (option.auto) return option.description
     return [option.variation, option.authorsLabel || option.description].filter(Boolean).join(' · ')
 }
 
@@ -90,9 +85,9 @@ async function copyLink() {
                     <label class="font-medium text-sm text-gray-900" for="compareQuantumAlgorithm">Quantum algorithm</label>
                     <Multiselect id="compareQuantumAlgorithm" class="custom-multiselect mt-1" track-by="key" label="name"
                         v-model="quantumAlgorithm" :options="quantumOptions" :searchable="true" :close-on-select="true"
-                        :allowEmpty="false" :show-labels="false" placeholder="Choose quantum algorithm">
+                        :allowEmpty="false" :show-labels="false" :placeholder="recommendedQuantumKey ? 'Choose quantum algorithm' : 'Finding the recommended algorithm…'">
                         <template #option="{ option }">
-                            <div :title="option.auto ? '' : algorithmCredit(option)">
+                            <div :title="algorithmCredit(option)">
                                 <div class="font-medium">
                                     {{ option.name }}
                                     <span v-if="option.year" class="font-normal opacity-70">({{ option.year }})</span>
@@ -106,6 +101,8 @@ async function copyLink() {
                             <div class="font-medium">
                                 {{ option.name }}
                                 <span v-if="option.year" class="font-normal text-gray-600">({{ option.year }})</span>
+                                <span v-if="option.recommended"
+                                    class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
                             </div>
                         </template>
                     </Multiselect>
@@ -116,7 +113,7 @@ async function copyLink() {
                         v-model="classicalAlgorithm" :options="classicalOptions" :searchable="true" :close-on-select="true"
                         :allowEmpty="false" :show-labels="false" placeholder="Choose classical algorithm">
                         <template #option="{ option }">
-                            <div :title="option.auto ? '' : algorithmCredit(option)">
+                            <div :title="algorithmCredit(option)">
                                 <div class="font-medium">
                                     {{ option.name }}
                                     <span v-if="option.year" class="font-normal opacity-70">({{ option.year }})</span>
@@ -130,6 +127,8 @@ async function copyLink() {
                             <div class="font-medium">
                                 {{ option.name }}
                                 <span v-if="option.year" class="font-normal text-gray-600">({{ option.year }})</span>
+                                <span v-if="option.recommended"
+                                    class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
                             </div>
                         </template>
                     </Multiselect>
@@ -139,7 +138,8 @@ async function copyLink() {
             <div class="mt-4 text-gray-500">
                 <HardwareComparisonGraph :model="comparison.model"
                     :quantum-key="comparison.quantumKey" :classical-key="comparison.classicalKey"
-                    v-model:mode="comparison.mode" v-model:hidden="comparison.hidden" />
+                    v-model:mode="comparison.mode" v-model:hidden="comparison.hidden"
+                    @recommended="recommendedQuantumKey = $event" />
             </div>
         </div>
 

@@ -6,13 +6,16 @@
  * line crosses 0 in the QEA year. Used by the Hardware Comparison page.
  *
  * Modelling choices (kept here and in docs/hardware-comparison.md, not in the UI):
- * - Unless the reader picks one, each line uses one quantum algorithm: the one
- *   that reaches QEA first on that hardware (see bestOf). Candidates: the
+ * - Every line uses the same quantum algorithm. Unless the reader picks one,
+ *   it's the recommended one: the algorithm that does best (reaches QEA
+ *   first) on the most hardware, for speed and cost (see recommendedOf). The
+ *   page's dropdown marks it "Recommended". Candidates: the
  *   problem's quantum algorithms for its own variation or the general problem
  *   (see sameVersion), minus approximate and heuristic-based ones, plus the
  *   model's own formula when it isn't one of them. The calculator's default is
  *   always a candidate.
- * - Unless the reader picks one, the classical baseline is the single
+ * - Unless the reader picks one, the classical baseline (marked "Recommended"
+ *   on the page) is the single
  *   classical algorithm whose runtime grows slowest as n grows (p = 1), from
  *   the same kind of pool minus parallel algorithms, plus the model's own
  *   classical formula when it isn't one of them.
@@ -270,10 +273,11 @@ function seriesFor(model, hardware, classical, quantum, years) {
     }
 }
 
-// One algorithm per hardware: the one that reaches QEA first; if none does,
-// the one with the most headroom at the end of the period. (Picking the best
-// algorithm year by year gives the same lines: on the current sheet the best
-// algorithm never changes within the period on any problem.)
+// The candidate that does best on one hardware: the one that reaches QEA
+// first; if none does, the one with the most headroom at the end of the
+// period. (Picking the best algorithm year by year gives the same lines: on
+// the current sheet the best algorithm never changes within the period on any
+// problem.)
 function bestOf(series) {
     let best = null;
     series.forEach((s, k) => {
@@ -286,57 +290,77 @@ function bestOf(series) {
             if (v !== null && v !== -Infinity && (best === null || !(last(series[best]) >= v))) best = k;
         });
     }
-    if (best === null) best = 0;
+    return best === null ? 0 : best;
+}
+
+// The recommended quantum algorithm: the one that does best on the most
+// hardware, counting speed and cost. Ties go to the earlier candidate (the
+// calculator's default comes first).
+function recommendedOf(seriesByHardware) {
+    const wins = seriesByHardware[0].map(() => 0);
+    for (const series of seriesByHardware) {
+        for (const mode of ['speed', 'cost']) wins[bestOf(series.map(s => s[mode]))]++;
+    }
+    return wins.indexOf(Math.max(...wins));
+}
+
+// One line's values for one mode.
+function lineOf(series, algorithm) {
     return {
-        algorithm: best,
-        values: series[best].values.map(v => (v === null || v === -Infinity ? null : v)),
+        algorithm,
+        values: series.values.map(v => (v === null || v === -Infinity ? null : v)),
         // Infinity: not before 3000. null: couldn't be calculated.
-        qea: series[best].qea,
+        qea: series.qea,
     };
 }
 
 /**
  * Everything the graph needs, or null when the problem has no quantum
- * algorithm or no usable classical one.
+ * algorithm or no usable classical one. Every hardware uses the same quantum
+ * algorithm.
  *   years: [year...] (twice a year, this year to YEARS_SHOWN years out)
  *   lines: [{ name, technology, basedOn, roadmapEnd, speed, cost }], one per hardware,
  *     where speed and cost are { algorithm (candidate index),
  *     values: [headroom | null], qea: year | Infinity | null }
  *   candidates: [{ key, name, authors, year, tex, custom }]
+ *   recommendedKey: the recommended quantum algorithm's key (see recommendedOf)
  *   classical: { key, name, tex }
  * options.quantumKey / options.classicalKey: use that algorithm (an
- * algorithm's key) instead of the best quantum one per hardware or the
- * fastest classical one. Unknown keys fall back to the automatic choice.
+ * algorithm's key) instead of the recommended quantum one or the fastest
+ * classical one. Unknown keys fall back to those.
  */
 export function compareHardwareOverTime(model, problem, hardwares, { quantumKey = null, classicalKey = null } = {}) {
     if (!model || !problem) return null;
-    let quantum = quantumCandidates(problem, model);
-    const chosenQuantum = quantumKey && quantum.find(a => a.key === quantumKey);
-    if (chosenQuantum) quantum = [chosenQuantum];
+    const quantum = quantumCandidates(problem, model);
     const classical = (classicalKey && classicalCandidates(problem, model).find(a => a.key === classicalKey))
         || fastestClassical(problem, model);
-    if (!quantum.length || !classical) return null;
+    if (!quantum.length || !classical || !hardwares.length) return null;
 
     const years = Array.from({ length: YEARS_SHOWN * STEPS_PER_YEAR + 1 }, (_, i) => currentYear + i / STEPS_PER_YEAR);
 
-    const lines = hardwares.map(hardware => {
+    // Every candidate on every hardware, to find the recommended one.
+    const seriesByHardware = hardwares.map(hardware => {
         // Algorithms with the same formulas and qubits give the same results.
         const cache = new Map();
-        const series = quantum.map(algorithm => {
+        return quantum.map(algorithm => {
             const key = [algorithm.runtimeFormula, algorithm.workFormula, algorithm.qubits].join('|');
             if (!cache.has(key)) cache.set(key, seriesFor(model, hardware, classical, algorithm, years));
             return cache.get(key);
         });
-        return {
-            name: hardware.hardwareName,
-            technology: hardwareTechnology(hardware),
-            basedOn: hardware.basedOn || null,
-            // The last roadmap year; later values are extrapolated.
-            roadmapEnd: roadmapSpan(hardware.roadmap)?.[1] ?? null,
-            speed: bestOf(series.map(s => s.speed)),
-            cost: bestOf(series.map(s => s.cost)),
-        };
     });
+    const recommended = recommendedOf(seriesByHardware);
+    const chosen = quantumKey ? quantum.findIndex(a => a.key === quantumKey) : -1;
+    const used = chosen >= 0 ? chosen : recommended;
+
+    const lines = hardwares.map((hardware, h) => ({
+        name: hardware.hardwareName,
+        technology: hardwareTechnology(hardware),
+        basedOn: hardware.basedOn || null,
+        // The last roadmap year; later values are extrapolated.
+        roadmapEnd: roadmapSpan(hardware.roadmap)?.[1] ?? null,
+        speed: lineOf(seriesByHardware[h][used].speed, used),
+        cost: lineOf(seriesByHardware[h][used].cost, used),
+    }));
 
     return {
         years,
@@ -349,6 +373,7 @@ export function compareHardwareOverTime(model, problem, hardwares, { quantumKey 
             tex: bigOTex(a.runtimeFormula),
             custom: !!a.custom,
         })),
+        recommendedKey: quantum[recommended].key || null,
         classical: { key: classical.key || null, name: classical.name || 'Classical algorithm', tex: bigOTex(classical.runtimeFormula) },
     };
 }

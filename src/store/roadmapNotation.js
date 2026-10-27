@@ -3,21 +3,21 @@
 // comparison:
 //   filled dot   demonstrated: a machine that exists
 //   hollow dot   projected: on the vendor's roadmap
-//   solid line   between roadmap points
-//   faded line   extrapolated outside the roadmap
-//   grey band    the years outside the roadmap (graphs of one hardware)
+//   faded line   within the roadmap (between its first and last points)
+//   bold line    extrapolated outside the roadmap
+//   grey band    the years past the roadmap (graphs of one hardware)
 // Dashes are left free: the hardware comparison uses them for vendors.
 // Colour says what is counted: physical qubits light red, logical qubits dark
 // red. Counts are labelled 10^x. Values are log10 qubits.
 import * as utils from './utils'
 
 export const QUBIT_COLORS = { physical: '#E57373', logical: '#a32035' }
-export const EXTRAPOLATED_COLOR = '#6b7280'
+export const LEGEND_LINE_COLOR = '#6b7280'
 const FADED_OPACITY = 0.35
 const BAND_COLOR = 'rgba(17, 24, 39, 0.04)'
 const BAND_TEXT = '#6b7280'
 
-// A line colour as drawn outside the roadmap. Takes #rrggbb or rgb()/rgba().
+// A line colour as drawn within the roadmap. Takes #rrggbb or rgb()/rgba().
 export function fadedColor(color, opacity = FADED_OPACITY) {
     let rgb = null
     const hex = /^#([0-9a-f]{6})$/i.exec(color || '')
@@ -62,6 +62,8 @@ export function roadmapPointSeries(roadmap, dataPointTypes, color) {
         name: type === 'demonstrated' ? 'Demonstrated' : 'Projected',
         type: 'scatter',
         color,
+        // Points only: some charts set a line width for every series.
+        lineWidth: 0,
         data: points.filter(([year]) => pointType(dataPointTypes, year) === type),
         marker: { enabled: true, symbol: 'circle', radius: 4, fillColor, lineColor: color, lineWidth: 2 },
         dataLabels,
@@ -71,12 +73,12 @@ export function roadmapPointSeries(roadmap, dataPointTypes, color) {
 }
 
 // A legend entry for the faded line (it has no points of its own).
-export function extrapolatedLegendSeries() {
+export function withinRoadmapLegendSeries() {
     return {
-        name: 'Extrapolated',
+        name: 'Within roadmap',
         type: 'line',
         data: [],
-        color: fadedColor(EXTRAPOLATED_COLOR, 0.5),
+        color: fadedColor(LEGEND_LINE_COLOR, 0.5),
         marker: { enabled: false },
         enableMouseTracking: false,
         events: { legendItemClick: () => false },
@@ -89,13 +91,12 @@ export function roadmapSpan(roadmap) {
     return points.length ? [points[0][0], points.at(-1)[0]] : null
 }
 
-// Line zones (zoneAxis 'x'): faded before the first and after the last
-// roadmap year. color: the line's colour.
-export function extrapolationZones(roadmap, color) {
+// Line zones (zoneAxis 'x'): faded from the first to the last roadmap year,
+// full colour outside. color: the line's colour.
+export function roadmapZones(roadmap, color) {
     const span = roadmapSpan(roadmap)
-    const faded = fadedColor(color)
-    if (!span) return [{ color: faded }]
-    return [{ value: span[0], color: faded }, { value: span[1] }, { color: faded }]
+    if (!span) return []
+    return [{ value: span[0] }, { value: span[1], color: fadedColor(color) }, {}]
 }
 
 // x-axis plot bands shading the years outside the roadmap, on an axis that

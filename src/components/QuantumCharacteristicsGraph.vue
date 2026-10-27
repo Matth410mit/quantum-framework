@@ -9,7 +9,7 @@ import { Chart } from 'highcharts-vue'
 import { ref, defineProps, watch } from 'vue';
 import * as utils from "../store/utils"
 import {
-    QUBIT_COLORS, qubitColor, qubitUnitLabel, roadmapPointSeries, extrapolatedLegendSeries, extrapolationZones,
+    QUBIT_COLORS, qubitColor, qubitUnitLabel, roadmapPointSeries, withinRoadmapLegendSeries, roadmapZones,
     beyondRoadmapBands, yearTickInterval,
 } from '../store/roadmapNotation'
 
@@ -275,8 +275,8 @@ function updateGraph() {
         }
     },
     ]
-    // The years past the last roadmap point are shaded (and the lines faded)
-    // instead of marked with a line.
+    // The years past the last roadmap point are shaded (and the lines bold,
+    // faded before) instead of marked with a line.
     chartOptions.xAxis.plotBands = beyondRoadmapBands(data.roadmap)
 
 
@@ -309,7 +309,7 @@ function updateGraph() {
             data: withEndLabel(points, name, color),
             color,
             zoneAxis: 'x',
-            zones: extrapolationZones(data.roadmap, color),
+            zones: roadmapZones(data.roadmap, color),
             marker: { enabled: false, symbol: 'circle' },
         }
     }
@@ -320,7 +320,7 @@ function updateGraph() {
         lineSeries('Problem size', data.problemSize, PROBLEM_SIZE_COLOR),
         // The roadmap's own points, on the qubit line they count.
         ...roadmapPointSeries(data.roadmap, data.dataPointTypes, qubitColor(data.roadmapUnit)),
-        extrapolatedLegendSeries(),
+        withinRoadmapLegendSeries(),
     ]
     chartOptions.annotations = [
     ]
