@@ -24,10 +24,13 @@ const ibm2024Roadmap = {
     2028: 1092,
 };
 
+// 2026: up to three 120-qubit Nighthawk modules (IBM roadmap). 2029 and 2033
+// are estimates: IBM gives Starling (200 logical) as "1000s" of physical
+// qubits and Blue Jay (2,000 logical) as about 10x that.
 const ibm2025Roadmap = {
     2024: 156,
     2025: 156,
-    2026: 120,
+    2026: 360,
     2028: 1080,
     2029: 10000,
     2033: 100000,
@@ -44,7 +47,7 @@ const iqmRoadmap = {
 
 const quantinuumRoadmap = {
     2024: 56,
-    2025: 96,
+    2025: 98,
     2027: 192,
     2029: 1000,
 };
@@ -80,7 +83,7 @@ const initialPresets = [
         physicalLogicalQubitsRatio: 264,
         ratioImprovementRate: -23,
         roadmap: ibm2025Roadmap,
-        dataPointTypes: typesByYear(ibm2025Roadmap),
+        dataPointTypes: typesByYear(ibm2025Roadmap, 2025),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
@@ -141,7 +144,7 @@ const initialPresets = [
         physicalLogicalQubitsRatio: 100,
         ratioImprovementRate: -23,
         roadmap: iqmRoadmap,
-        dataPointTypes: typesByYear(iqmRoadmap),
+        dataPointTypes: typesByYear(iqmRoadmap, 2024),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
@@ -181,7 +184,7 @@ const initialPresets = [
         physicalLogicalQubitsRatio: 32,
         ratioImprovementRate: -23,
         roadmap: quantinuumRoadmap,
-        dataPointTypes: typesByYear(quantinuumRoadmap),
+        dataPointTypes: typesByYear(quantinuumRoadmap, 2025),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
@@ -198,12 +201,13 @@ const initialPresets = [
         costImprovementRate: -10,
         physicalLogicalQubitsRatio: 100,
         ratioImprovementRate: -23,
+        // Aquila (2022), then the Jan 2024 roadmap: 3,000 (2025), 10,000 (2026).
         roadmap: {
-            2023: 256,
+            2022: 256,
             2025: 3000,
             2026: 10000,
         },
-        dataPointTypes: typesByYear({ 2023: 256, 2025: 3000, 2026: 10000 }),
+        dataPointTypes: typesByYear({ 2022: 256, 2025: 3000, 2026: 10000 }, 2024),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
@@ -220,17 +224,20 @@ const initialPresets = [
         costImprovementRate: -10,
         physicalLogicalQubitsRatio: 100,
         ratioImprovementRate: -10,
+        // Logical qubits from Pasqal's 2025 roadmap. Its physical-qubit targets
+        // contradict each other (10,000 in 2028 in one place, 2030 in another).
         roadmap: {
-            2022: 200,
-            2024: 1000,
-            2026: 10000,
+            2025: 2,
+            2027: 20,
+            2029: 100,
+            2030: 200,
         },
-        dataPointTypes: typesByYear({ 2022: 200, 2024: 1000, 2026: 10000 }),
-        roadmapUnit: "physical",
+        dataPointTypes: typesByYear({ 2025: 2, 2027: 20, 2029: 100, 2030: 200 }, 2024),
+        roadmapUnit: "logical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
-        reference: "https://www.hpcwire.com/2024/03/13/pasqal-issues-roadmap-to-10000-qubits-in-2026-and-fault-tolerance-in-2028/",
-        provenance: "third-party",
+        reference: "https://www.pasqal.com/newsroom/pasqal-releases-2025-roadmap/",
+        provenance: "vendor-published",
     },
     {
         hardwareName: "Infleqtion (Neutral Atom)",
@@ -242,16 +249,17 @@ const initialPresets = [
         costImprovementRate: -10,
         physicalLogicalQubitsRatio: 800,
         ratioImprovementRate: -10,
+        // 30 logical qubits shown in Sept 2026; 100 by 2028 and 1,000 by 2030.
         roadmap: {
-            2024: 2,
-            2026: 10,
+            2026: 30,
             2028: 100,
+            2030: 1000,
         },
-        dataPointTypes: typesByYear({ 2024: 2, 2026: 10, 2028: 100 }),
+        dataPointTypes: typesByYear({ 2026: 30, 2028: 100, 2030: 1000 }),
         roadmapUnit: "logical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
-        reference: "https://www.nextbigfuture.com/2024/02/infleqtion-1600-qubit-array-today-and-five-year-roadmap-to-fault-tolerant-quantum-computers.html",
+        reference: "https://thequantuminsider.com/2026/09/24/infleqtion-achieves-30-entangled-logical-qubits-on-its-sqale-quantum-computer/",
         provenance: "third-party",
     },
     {
@@ -269,7 +277,8 @@ const initialPresets = [
             2021: 6,
             2024: 100,
         },
-        dataPointTypes: typesByYear({ 2018: 1, 2021: 6, 2024: 100 }),
+        // 2024: 100 was a CEA-Leti projection; no 100-qubit silicon chip was shown.
+        dataPointTypes: typesByYear({ 2018: 1, 2021: 6, 2024: 100 }, 2021),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
