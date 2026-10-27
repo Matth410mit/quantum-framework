@@ -211,8 +211,16 @@ export function modelQubitsNeeded(model) {
 }
 
 // f(logSize) = log10 of the qubits needed for a problem of size 10^logSize.
+// Compiled once per formula: feasibility is evaluated for many years.
+const logQubitsNeededCache = new Map();
 export function createLogQubitsNeeded(qubitsNeeded) {
-    const f = createConvertedFunction(qubitsNeeded || "n");
+    const formula = qubitsNeeded || "n";
+    if (!logQubitsNeededCache.has(formula)) logQubitsNeededCache.set(formula, compileLogQubitsNeeded(formula));
+    return logQubitsNeededCache.get(formula);
+}
+
+function compileLogQubitsNeeded(qubitsNeeded) {
+    const f = createConvertedFunction(qubitsNeeded);
     return logSize => {
         const value = Number(f(logSize, { n: logSize }));
         return typeof value === "number" ? value : NaN;
