@@ -1,21 +1,24 @@
 <script setup>
-// For the model's problem: when each quantum algorithm reaches quantum
-// economic advantage on each hardware preset. x = hardware, y = the
-// algorithm's asymptotic runtime, colour = years behind the earliest on that
-// hardware, ring = the earliest. The calculation is in store/hardwareComparison.js.
+// One line per hardware over time: how far the largest problem it can run is
+// past the smallest problem where quantum wins (speed or cost). A line crosses
+// 1× in that hardware's QEA year. The calculation is in
+// store/hardwareComparison.js.
 import { Chart } from 'highcharts-vue'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import * as utils from '../store/utils'
 import { useHardwaresStore } from '../store/hardwares'
-import { algorithmCredit, findProblem } from '../store/problemCatalog'
-import { compareHardware } from '../store/hardwareComparison'
+import { findProblem } from '../store/problemCatalog'
+import { compareHardwareOverTime, technologyLabel, TECHNOLOGY_ORDER, YEARS_SHOWN } from '../store/hardwareComparison'
 
 const props = defineProps({
     model: Object,
 })
 
 const hardwaresStore = useHardwaresStore()
+const currentYear = new Date().getFullYear()
+const lastYear = currentYear + YEARS_SHOWN
 
 const mode = ref('speed') // 'speed' | 'cost'
 const result = ref(null)
@@ -23,12 +26,22 @@ const loading = ref(false)
 const failed = ref(false)
 const showTable = ref(false)
 
-// Sequential blue, light -> dark (steps 250-700). Earlier QEA = darker.
-const RAMP = ['#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b']
+// Colour = technology (categorical slots 1-4), dash = vendor within it.
+const TECH_COLORS = {
+    superconducting: '#2a78d6',
+    trappedIon: '#eb6834',
+    neutralAtom: '#1baf7a',
+    semiconductor: '#eda100',
+    other: '#6b7280',
+}
+const DASHES = ['Solid', 'Dash', 'ShortDot', 'DashDot', 'LongDash', 'ShortDash', 'LongDashDot']
 const INK = '#111827'        // gray-900
 const MUTED = '#6b7280'      // gray-500
-const NEVER = '#9ca3af'      // gray-400
 const GRID = '#f3f4f6'       // gray-100
+
+// Lines leave the plot above this (Database Search reaches 10^19,000,000×).
+const Y_CAP = 12
+const Y_FLOOR = -40
 
 // ---------------------------------------------------------------------------
 // Calculation (in a worker when available, newest request wins)
@@ -67,7 +80,7 @@ function recalculate() {
     setTimeout(() => {
         if (id !== requestId) return
         try {
-            result.value = compareHardware(model, findProblem(model.problemName), hardwares)
+            result.value = compareHardwareOverTime(model, findProblem(model.problemName), hardwares)
             failed.value = false
         } catch (err) {
             console.warn('Hardware comparison failed:', err)
@@ -109,163 +122,159 @@ function escapeHtml(text) {
     return String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 }
 
-function formatYear(year) {
+function formatQea(year) {
     if (year === null || year === undefined) return 'Could not be calculated'
     if (year === Infinity) return 'Not before 3000'
+    if (year <= currentYear) return 'Already'
     return year.toFixed(1)
 }
 
-// "IonQ (Trapped Ion)" -> ["IonQ", "Trapped Ion"]
-function splitHardwareName(column) {
-    if (column.current) return ['Current inputs', column.basedOn ? `based on ${column.basedOn}` : '']
-    const match = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(column.name)
-    return match ? [match[1], match[2]] : [column.name, '']
+// "IonQ (Trapped Ion)" -> "IonQ"
+function shortName(line) {
+    if (line.current) return 'Current inputs'
+    return line.name.replace(/\s*\([^)]*\)\s*$/, '') || line.name
 }
 
-// Colour = how far behind the earliest algorithm on the same hardware, so
-// close runners-up stand out (absolute years mostly differ by hardware,
-// which the x-axis already shows).
-const YEARS_BEHIND_CAP = 10
+// The tooltip's line key in CSS terms.
+function borderStyle(dashStyle = 'Solid') {
+    if (dashStyle === 'Solid') return 'solid'
+    return /Dot$/.test(dashStyle) ? 'dotted' : 'dashed'
+}
 
-const earliestByColumn = computed(() => {
-    const earliest = new Map()
-    for (const p of result.value?.points || []) {
-        const year = p[mode.value]
-        if (Number.isFinite(year) && !(year >= earliest.get(p.column))) earliest.set(p.column, year)
-    }
-    return earliest
+function algorithmLabel(candidate) {
+    if (!candidate) return ''
+    const byline = candidate.authors && candidate.authors !== candidate.name ? ` (${candidate.authors}${candidate.year ? ` ${candidate.year}` : ''})` : (candidate.year ? ` (${candidate.year})` : '')
+    return candidate.name + byline
+}
+
+// Lines grouped by technology, so the legend reads in groups.
+const orderedLines = computed(() => {
+    const lines = (result.value?.lines || []).map((line, index) => ({ ...line, index }))
+    const rank = line => line.current ? TECHNOLOGY_ORDER.length : TECHNOLOGY_ORDER.indexOf(line.technology)
+    return lines.sort((a, b) => rank(a) - rank(b) || a.index - b.index)
 })
 
-function colorForPoint(p) {
-    const behind = p[mode.value] - earliestByColumn.value.get(p.column)
-    const t = Math.min(Math.max(behind, 0) / YEARS_BEHIND_CAP, 1) // 0 = earliest (darkest)
-    return RAMP[Math.round((1 - t) * (RAMP.length - 1))]
-}
-
-const winnerSet = computed(() => new Set((result.value?.winners?.[mode.value] || []).flat()))
-// Tied winners share one year label.
-const labelledWinners = computed(() => new Set((result.value?.winners?.[mode.value] || []).map(ids => ids[0])))
-
-// Points that share a hardware column and a row are spread side by side, in
-// the same order on every hardware.
-function columnOffsets(points) {
-    const groups = new Map()
-    points.forEach((p, i) => {
-        const key = `${p.column}|${p.row}`
-        if (!groups.has(key)) groups.set(key, [])
-        groups.get(key).push(i)
-    })
-    const offsets = new Array(points.length).fill(0)
-    for (const members of groups.values()) {
-        const step = Math.min(0.12, 0.7 / members.length)
-        members.forEach((i, j) => { offsets[i] = (j - (members.length - 1) / 2) * step })
+const lineStyles = computed(() => {
+    const used = {}
+    const styles = new Map()
+    for (const line of orderedLines.value) {
+        if (line.current) {
+            styles.set(line.index, { color: INK, dashStyle: 'Solid', width: 3 })
+            continue
+        }
+        const n = used[line.technology] = (used[line.technology] ?? -1) + 1
+        styles.set(line.index, { color: TECH_COLORS[line.technology] || TECH_COLORS.other, dashStyle: DASHES[n % DASHES.length], width: 2 })
     }
-    return offsets
-}
+    return styles
+})
 
-const chartHeight = computed(() => Math.max(320, (result.value?.rows.length || 0) * 44 + 150))
+const hasValues = computed(() =>
+    (result.value?.lines || []).some(line => line[mode.value].values.some(v => v !== null)))
+
+const sameAlgorithmEverywhere = computed(() => {
+    const lines = result.value?.lines || []
+    const first = lines[0]?.[mode.value].algorithm
+    return lines.every(line => line[mode.value].algorithm === first) ? first : null
+})
+
+const classicalHtml = computed(() => {
+    const c = result.value?.classical
+    return c ? `${escapeHtml(c.name)} ${tex(c.tex)}` : ''
+})
+
+const yRange = computed(() => {
+    const values = (result.value?.lines || []).flatMap(line => line[mode.value].values).filter(v => v !== null)
+    if (!values.length) return { min: -1, max: 1 }
+    const min = Math.max(Math.floor(Math.min(...values, 0)), Y_FLOOR)
+    const max = Math.min(Math.ceil(Math.max(...values, 0)), Y_CAP)
+    return { min, max: Math.max(max, 1) }
+})
 
 const chartOptions = computed(() => {
     const data = result.value
     if (!data) return null
     const key = mode.value
-    const winners = winnerSet.value
-    const offsets = columnOffsets(data.points)
 
-    const points = data.points.map((p, i) => {
-        const year = p[key]
-        const reached = Number.isFinite(year)
-        const isWinner = winners.has(i)
+    const series = orderedLines.value.map(line => {
+        const style = lineStyles.value.get(line.index)
+        const { values, qea } = line[key]
+        const points = data.years.map((year, i) => ({ x: year, y: values[i] }))
+        // Mark the QEA year on the line.
+        if (Number.isFinite(qea) && qea <= lastYear) {
+            const marker = { enabled: true, radius: 5, fillColor: style.color, lineColor: '#ffffff', lineWidth: 2, symbol: 'circle' }
+            if (qea <= currentYear) {
+                if (points[0].y !== null) points[0] = { ...points[0], marker, qea: true }
+            } else {
+                const at = points.findIndex(p => p.x > qea)
+                points.splice(at === -1 ? points.length : at, 0, { x: qea, y: 0, marker, qea: true })
+            }
+        }
         return {
-            x: p.column + offsets[i],
-            y: p.row,
-            index: i,
-            marker: reached
-                ? {
-                    radius: isWinner ? 7 : 5,
-                    fillColor: colorForPoint(p),
-                    lineColor: isWinner ? INK : '#ffffff',
-                    lineWidth: 2,
-                }
-                : { radius: 5, fillColor: '#ffffff', lineColor: NEVER, lineWidth: 1.5 },
-            dataLabels: {
-                enabled: labelledWinners.value.has(i),
-                format: formatYear(year),
-                y: -10,
-                style: { color: INK, fontSize: '10px', fontWeight: '600', textOutline: '2px #ffffff' },
-            },
+            type: 'line',
+            name: shortName(line),
+            lineIndex: line.index,
+            color: style.color,
+            dashStyle: style.dashStyle,
+            lineWidth: style.width,
+            data: points,
+            connectNulls: false,
+            marker: { enabled: false, symbol: 'circle', states: { hover: { enabled: false } } },
         }
     })
 
-    const classicalName = data.classical.algorithm.name || 'Classical'
-
     return {
         chart: {
-            type: 'scatter',
-            height: chartHeight.value,
+            height: 460,
             backgroundColor: 'transparent',
             spacingTop: 16,
             style: { fontFamily: 'inherit' },
         },
         credits: { enabled: false },
         exporting: { enabled: false },
+        accessibility: { enabled: false },
         title: { text: null },
-        legend: { enabled: false },
-        xAxis: {
-            categories: data.columns.map(c => c.name),
-            min: -0.5,
-            max: data.columns.length - 0.5,
-            startOnTick: false,
-            endOnTick: false,
-            title: { text: 'Hardware', style: { color: MUTED } },
-            lineColor: '#e5e7eb',
-            tickLength: 0,
-            gridLineWidth: 1,
-            gridLineColor: GRID,
-            tickInterval: 1,
-            labels: {
-                useHTML: true,
-                autoRotation: false,
-                style: { textOverflow: 'none' },
-                formatter() {
-                    const column = data.columns[this.pos]
-                    if (!column) return ''
-                    let [name, kind] = splitHardwareName(column)
-                    // Narrow columns: shorten the long technology names so neighbours don't touch.
-                    if (this.axis.len / data.columns.length < 100) {
-                        kind = kind.replace('Superconducting', 'Supercond.').replace('Semiconductors', 'Semicond.')
-                    }
-                    return `<div style="text-align:center;line-height:1.2;width:84px;white-space:normal;color:${INK};font-size:11px">${escapeHtml(name)}`
-                        + (kind ? `<div style="color:${MUTED};font-size:9px">${escapeHtml(kind)}</div>` : '')
-                        + '</div>'
-                },
+        legend: {
+            enabled: true,
+            align: 'center',
+            itemStyle: { color: INK, fontWeight: 'normal', fontSize: '11px' },
+            itemHiddenStyle: { color: '#d1d5db' },
+            symbolWidth: 28,
+            labelFormatter() {
+                const line = data.lines[this.userOptions.lineIndex]
+                const qea = line[key].qea
+                return `${escapeHtml(this.name)} <span style="color:${MUTED}">${formatQea(qea)}</span>`
             },
         },
+        xAxis: {
+            type: 'linear',
+            min: currentYear,
+            max: lastYear,
+            tickInterval: YEARS_SHOWN > 20 ? 5 : 1,
+            title: { text: 'Year', style: { color: MUTED } },
+            labels: { formatter() { return String(this.value) } },
+            lineColor: '#e5e7eb',
+            crosshair: { color: '#d1d5db', width: 1 },
+        },
         yAxis: {
-            categories: data.rows.map(r => r.tex),
-            min: -0.5,
-            max: data.rows.length - 0.5,
+            min: yRange.value.min,
+            max: yRange.value.max,
             startOnTick: false,
             endOnTick: false,
-            tickInterval: 1,
-            title: { text: 'Asymptotic time complexity', style: { color: MUTED } },
-            gridLineWidth: 1,
+            tickInterval: yRange.value.max - yRange.value.min > 16 ? 5 : 1,
+            title: { text: 'Runnable ÷ break-even problem size', style: { color: MUTED } },
             gridLineColor: GRID,
             labels: {
                 useHTML: true,
-                formatter() {
-                    const row = data.rows[this.pos]
-                    return row ? `<span style="color:${INK};font-size:12px">${tex(row.tex)}</span>` : ''
-                },
+                formatter() { return `${utils.toBase10HTML(this.value)}×` },
             },
+            plotBands: [{ from: 0, to: Y_CAP + 100, color: 'rgba(17, 24, 39, 0.025)' }],
             plotLines: [{
-                value: data.classical.rowIndex,
-                color: MUTED,
-                width: 2,
-                dashStyle: 'Dash',
-                zIndex: 2,
+                value: 0,
+                color: '#9ca3af',
+                width: 1.5,
+                zIndex: 3,
                 label: {
-                    text: `Fastest classical: ${escapeHtml(classicalName)}`,
+                    text: 'Quantum economic advantage ↑',
                     align: 'right',
                     x: -4,
                     y: -6,
@@ -274,71 +283,73 @@ const chartOptions = computed(() => {
             }],
         },
         tooltip: {
+            shared: true,
             useHTML: true,
             shadow: false,
             backgroundColor: 'transparent',
             borderWidth: 0,
             padding: 0,
             formatter() {
-                const p = data.points[this.point.index]
-                const column = data.columns[p.column]
-                const credit = algorithmCredit(p.algorithm).split('\n')[0]
-                const line = (label, value, active) =>
-                    `<div style="display:flex;justify-content:space-between;gap:12px;${active ? `color:${INK};font-weight:600` : `color:${MUTED}`}">`
-                    + `<span>${label}</span><span>${formatYear(value)}</span></div>`
-                return `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;min-width:220px;max-width:320px;white-space:normal;font-size:12px">`
-                    + `<div style="color:${INK};font-weight:600">${escapeHtml(p.algorithm.name || 'Quantum algorithm')}</div>`
-                    + (credit && credit !== p.algorithm.name ? `<div style="color:${MUTED}">${escapeHtml(credit)}</div>` : '')
-                    + `<div style="margin:4px 0">${tex(data.rows[p.row].tex)}</div>`
-                    + `<div style="color:${MUTED};margin-bottom:2px">${escapeHtml(column.name)}</div>`
-                    + line('Speed QEA', p.speed, key === 'speed')
-                    + line('Cost QEA', p.cost, key === 'cost')
-                    + (winnerSet.value.has(this.point.index) ? `<div style="margin-top:4px;color:${INK}">Earliest on this hardware</div>` : '')
+                const common = sameAlgorithmEverywhere.value
+                const rows = this.points
+                    .filter(p => p.y !== null && !p.point.qea)
+                    .sort((a, b) => b.y - a.y)
+                    .map(p => {
+                        const line = data.lines[p.series.userOptions.lineIndex]
+                        const algorithm = common === null ? `<div style="color:${MUTED};font-size:10px">${escapeHtml(algorithmLabel(data.candidates[line[key].algorithm]))}</div>` : ''
+                        return `<div style="display:flex;align-items:flex-start;gap:6px;margin-top:2px">`
+                            + `<span style="display:inline-block;width:14px;margin-top:7px;border-top:2px ${borderStyle(p.series.options.dashStyle)} ${p.series.color}"></span>`
+                            + `<div style="flex:1"><div style="display:flex;justify-content:space-between;gap:12px"><span>${escapeHtml(p.series.name)}</span>`
+                            + `<span style="font-weight:600">${utils.toBase10HTML(p.y)}×</span></div>${algorithm}</div></div>`
+                    }).join('')
+                const header = common !== null
+                    ? `<div style="color:${MUTED};margin-bottom:4px">${escapeHtml(algorithmLabel(data.candidates[common]))} ${tex(data.candidates[common].tex)}</div>`
+                    : ''
+                return `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;min-width:240px;max-width:340px;white-space:normal;font-size:12px;color:${INK}">`
+                    + `<div style="font-weight:600">${utils.round(this.x, 1)}</div>`
+                    + header
+                    + rows
                     + '</div>'
             },
         },
         plotOptions: {
             series: {
                 animation: false,
-                stickyTracking: false,
-                states: { inactive: { opacity: 1 } },
-            },
-            scatter: {
-                marker: { symbol: 'circle', states: { hover: { radiusPlus: 2, lineWidthPlus: 0 } } },
+                states: { inactive: { opacity: 0.35 }, hover: { lineWidthPlus: 1 } },
             },
         },
-        series: [{ name: 'Quantum algorithms', data: points, color: RAMP[RAMP.length - 1] }],
+        series,
     }
 })
 
-// One row per hardware: the earliest algorithm(s) and their year.
+// One row per hardware.
 const tableRows = computed(() => {
     const data = result.value
     if (!data) return []
-    return data.columns.map((column, c) => {
-        const winners = (data.winners[mode.value][c] || []).map(i => data.points[i])
+    return orderedLines.value.map(line => {
+        const entry = line[mode.value]
+        const candidate = data.candidates[entry.algorithm]
         return {
-            hardware: column.name,
-            algorithms: winners.map(p => p.algorithm.name).join(', ') || '—',
-            complexity: winners.length ? tex(data.rows[winners[0].row].tex) : '',
-            year: winners.length ? formatYear(winners[0][mode.value]) : 'Not before 3000',
+            hardware: line.current ? `Current inputs${line.basedOn ? ` (based on ${line.basedOn})` : ''}` : line.name,
+            technology: technologyLabel(line.technology),
+            algorithm: algorithmLabel(candidate),
+            complexity: candidate ? tex(candidate.tex) : '',
+            qea: formatQea(entry.qea),
         }
     })
 })
-
-const gradient = `linear-gradient(to right, ${[...RAMP].reverse().join(', ')})`
 </script>
 
 <template>
     <div class="py-2">
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-2">
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
             <div class="text-sm text-gray-700">
-                Earliest quantum economic advantage for each quantum algorithm, by hardware
+                When each hardware reaches quantum economic advantage, using its best algorithm
             </div>
             <div class="flex items-center gap-3">
                 <span v-if="loading" class="text-xs text-gray-500">Calculating…</span>
                 <div class="inline-flex rounded-md border border-gray-200 overflow-hidden text-xs" role="group"
-                    aria-label="Rank algorithms by">
+                    aria-label="Compare on">
                     <button type="button" @click="mode = 'speed'" :aria-pressed="mode === 'speed'"
                         :class="['px-3 py-1', mode === 'speed' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-100']">
                         Speed
@@ -350,31 +361,20 @@ const gradient = `linear-gradient(to right, ${[...RAMP].reverse().join(', ')})`
                 </div>
             </div>
         </div>
-
-        <div v-if="result" class="flex flex-wrap items-center gap-x-5 gap-y-2 pb-2 text-xs text-gray-600">
-            <span class="flex items-center gap-2">
-                <span>Years after the earliest on that hardware</span>
-                <span>0</span>
-                <span class="inline-block h-2 w-24 rounded-sm" :style="{ background: gradient }"></span>
-                <span>{{ YEARS_BEHIND_CAP }}+</span>
-            </span>
-            <span class="flex items-center gap-1.5">
-                <span class="inline-block w-3.5 h-3.5 rounded-full border-2 border-gray-900"
-                    :style="{ background: RAMP[RAMP.length - 1] }"></span>
-                Earliest on that hardware
-            </span>
-            <span class="flex items-center gap-1.5">
-                <span class="inline-block w-2.5 h-2.5 rounded-full border border-gray-400 bg-white"></span>
-                No QEA before 3000
-            </span>
-            <span class="flex items-center gap-1.5">
-                <span class="inline-block w-5 border-t-2 border-dashed border-gray-500"></span>
-                Fastest classical algorithm
-            </span>
+        <div v-if="result" class="pb-2 text-xs text-gray-500 space-y-0.5">
+            <div>
+                Above 1×, the hardware can run problems bigger than the smallest one where quantum is
+                {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical. Dots mark each hardware's QEA year.
+            </div>
+            <div>Compared with the fastest classical algorithm: <span v-html="classicalHtml"></span></div>
         </div>
 
-        <div v-if="result" :class="['transition-opacity', loading ? 'opacity-60' : '']">
+        <div v-if="result && hasValues" :class="['transition-opacity', loading ? 'opacity-60' : '']">
             <Chart :options="chartOptions" />
+        </div>
+        <div v-else-if="result" class="py-10 text-center text-sm text-gray-500">
+            Quantum is not {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical at any problem size on any
+            hardware between {{ currentYear }} and {{ lastYear }}.
         </div>
         <div v-else-if="!loading" class="py-10 text-center text-sm text-gray-500">
             {{ failed ? 'The comparison could not be calculated for these inputs.' : 'No quantum algorithm to compare for this problem.' }}
@@ -390,7 +390,8 @@ const gradient = `linear-gradient(to right, ${[...RAMP].reverse().join(', ')})`
                 <thead class="text-gray-500 border-b border-gray-200">
                     <tr>
                         <th class="py-1 pr-3 font-medium">Hardware</th>
-                        <th class="py-1 pr-3 font-medium">Earliest algorithm</th>
+                        <th class="py-1 pr-3 font-medium">Technology</th>
+                        <th class="py-1 pr-3 font-medium">Algorithm</th>
                         <th class="py-1 pr-3 font-medium">Complexity</th>
                         <th class="py-1 font-medium">{{ mode === 'speed' ? 'Speed' : 'Cost' }} QEA year</th>
                     </tr>
@@ -398,9 +399,10 @@ const gradient = `linear-gradient(to right, ${[...RAMP].reverse().join(', ')})`
                 <tbody>
                     <tr v-for="row in tableRows" :key="row.hardware" class="border-b border-gray-100">
                         <td class="py-1 pr-3">{{ row.hardware }}</td>
-                        <td class="py-1 pr-3">{{ row.algorithms }}</td>
+                        <td class="py-1 pr-3">{{ row.technology }}</td>
+                        <td class="py-1 pr-3">{{ row.algorithm }}</td>
                         <td class="py-1 pr-3" v-html="row.complexity"></td>
-                        <td class="py-1">{{ row.year }}</td>
+                        <td class="py-1">{{ row.qea }}</td>
                     </tr>
                 </tbody>
             </table>

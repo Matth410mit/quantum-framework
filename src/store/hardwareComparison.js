@@ -1,23 +1,24 @@
 /**
- * Hardware comparison: for the model's problem, the year each quantum
- * algorithm reaches quantum economic advantage (QEA) on each hardware preset.
- * Used by HardwareComparisonGraph.vue.
+ * Hardware comparison over time: for the model's problem, one line per
+ * hardware preset showing how far its largest runnable problem is past the
+ * smallest problem where quantum wins (the gap between the feasibility line
+ * and the speed or cost advantage line of the QEA graph). The line crosses 0
+ * in the QEA year. Used by HardwareComparisonGraph.vue.
  *
  * Modelling choices (kept here and in docs/hardware-comparison.md, not in the UI):
- * - Quantum candidates: the problem's quantum algorithms, minus approximate and
- *   heuristic-based ones, plus the model's own formula when it isn't one of them.
- *   The calculator's default is always a candidate.
+ * - Each line uses one quantum algorithm: the one that reaches QEA first on
+ *   that hardware (see bestOf). Candidates: the problem's quantum algorithms,
+ *   minus approximate and heuristic-based ones, plus the model's own formula
+ *   when it isn't one of them. The calculator's default is always a candidate.
  * - Classical baseline: the single classical algorithm whose runtime grows
  *   slowest as n grows (p = 1), from the same pool minus parallel algorithms
  *   and other variations of the problem (planar graphs, non-comparison sorts),
  *   plus the model's own classical formula when it isn't one of them.
- * - Each hardware column applies that preset's fields to a copy of the model
+ * - Each hardware line applies that preset's fields to a copy of the model
  *   (as the hardware dropdown does). Everything else (max compute time, ...)
  *   stays as the model has it. Each quantum algorithm uses its own qubit count.
- * - "Current inputs" is an extra column when the model's hardware fields no
+ * - "Current inputs" is an extra line when the model's hardware fields no
  *   longer match the preset it was set from.
- * - Rows group algorithms whose runtimes are within a constant factor of each
- *   other (same Θ class), sorted from slowest-growing to fastest-growing.
  */
 
 import * as math from 'mathjs';
@@ -33,9 +34,6 @@ const currentYear = new Date().getFullYear();
 // that 2^n stays finite in log space.
 const LOG_N_NEAR = 150;
 const LOG_N_FAR = 300;
-// Two runtimes are in the same class when their log10 ratio changes by less
-// than this between the two sizes (a constant factor doesn't change it).
-const SAME_CLASS_TOLERANCE = 0.05;
 
 // The model fields a hardware preset sets that change the results.
 const HARDWARE_FIELDS = [
@@ -57,12 +55,6 @@ function logRuntime(formula, logN) {
 
 function growthProfile(formula) {
     return { near: logRuntime(formula, LOG_N_NEAR), far: logRuntime(formula, LOG_N_FAR) };
-}
-
-function sameClass(a, b) {
-    const values = [a.near, a.far, b.near, b.far];
-    if (!values.every(Number.isFinite)) return false;
-    return Math.abs((a.far - b.far) - (a.near - b.near)) < SAME_CLASS_TOLERANCE;
 }
 
 function slowerGrowth(a, b) {
@@ -244,6 +236,30 @@ export function hardwareColumns(model, hardwares) {
 // ---------------------------------------------------------------------------
 // The comparison
 
+// The time axis: this year to YEARS_SHOWN years out, every half year.
+export const YEARS_SHOWN = 15;
+const STEPS_PER_YEAR = 2;
+
+const TECHNOLOGIES = [
+    { key: 'superconducting', label: 'Superconducting', match: /supercond/i },
+    { key: 'trappedIon', label: 'Trapped ion', match: /trapped|ion trap/i },
+    { key: 'neutralAtom', label: 'Neutral atom', match: /neutral|atom/i },
+    { key: 'semiconductor', label: 'Semiconductor', match: /semicond|silicon|spin/i },
+];
+
+// "IonQ (Trapped Ion)" -> trappedIon. Unknown (e.g. imported) -> 'other'.
+export function hardwareTechnology(name = '') {
+    const kind = /\(([^)]*)\)\s*$/.exec(name)?.[1] || name;
+    return TECHNOLOGIES.find(t => t.match.test(kind))?.key || 'other';
+}
+
+// Superconducting, trapped ion, neutral atom, semiconductor, other.
+export const TECHNOLOGY_ORDER = [...TECHNOLOGIES.map(t => t.key), 'other'];
+
+export function technologyLabel(key) {
+    return TECHNOLOGIES.find(t => t.key === key)?.label || 'Other';
+}
+
 // QEA years as calendar years: "already" becomes this year, a failed
 // bisection becomes null, never stays Infinity.
 function asYear(t) {
@@ -252,7 +268,16 @@ function asYear(t) {
     return t;
 }
 
-function qeaFor(model, column, classical, quantum) {
+// log10(feasible size) - log10(advantage size). null when it can't be
+// calculated; -Infinity when quantum doesn't win at any size that year.
+function headroom(feasible, advantage) {
+    if (advantage === null || advantage === undefined || !Number.isFinite(feasible)) return null;
+    if (advantage === Infinity) return -Infinity;
+    return feasible - advantage;
+}
+
+// Headroom for every year, and the QEA years, for one algorithm on one hardware.
+function seriesFor(model, column, classical, quantum, years) {
     const variant = JSON.parse(JSON.stringify(model));
     if (column.hardware) applyHardwareToModel(variant, column.hardware);
     variant.classicalRuntimeInput = classical.runtimeFormula;
@@ -262,84 +287,97 @@ function qeaFor(model, column, classical, quantum) {
     variant.qubitsNeeded = quantum.qubits;
     delete variant.qubitToProblemSize;
     try {
-        const { tStar, tCostStar } = quantumEconomicAdvantage(variant, { fast: true });
-        return { speed: asYear(tStar), cost: asYear(tCostStar) };
+        const qea = quantumEconomicAdvantage(variant, { fast: true });
+        const speed = [], cost = [];
+        for (const year of years) {
+            const feasible = qea.cappedFeasible(year);
+            speed.push(headroom(feasible, qea.quantumAdvantage(year)));
+            cost.push(headroom(feasible, qea.quantumCostAdvantage(year)));
+        }
+        return {
+            speed: { values: speed, qea: asYear(qea.tStar) },
+            cost: { values: cost, qea: asYear(qea.tCostStar) },
+        };
     } catch (err) {
-        console.warn('Hardware comparison: QEA failed for', column.name, quantum.name, err);
-        return { speed: null, cost: null };
+        console.warn('Hardware comparison failed for', column.name, quantum.name, err);
+        const empty = { values: years.map(() => null), qea: null };
+        return { speed: empty, cost: { ...empty } };
     }
 }
 
-// Groups the runtimes into rows of the same class, slowest-growing first.
-function complexityRows(formulas) {
-    const items = formulas.map((formula, i) => ({ i, formula, growth: growthProfile(formula), tex: bigOTex(formula) }));
-    items.sort((a, b) => slowerGrowth(a.growth, b.growth));
-    const rows = [];
-    const rowOf = new Array(formulas.length);
-    for (const item of items) {
-        // Same class, or the same label (n^2 (500 + log n) is still far from
-        // n^2 log n at the sizes compared, but reads the same).
-        const row = rows.find(r => sameClass(r.growth, item.growth)
-            || r.formulas.includes(item.formula) || r.texes.includes(item.tex));
-        if (row) {
-            row.formulas.push(item.formula);
-            row.texes.push(item.tex);
-            // The shortest label reads best (n^(3/2) rather than sqrt(n * n^2)).
-            if (item.tex.length < row.tex.length) row.tex = item.tex;
-            rowOf[item.i] = row;
-        } else {
-            const created = { growth: item.growth, tex: item.tex, texes: [item.tex], formulas: [item.formula] };
-            rows.push(created);
-            rowOf[item.i] = created;
-        }
+// One algorithm per hardware: the one that reaches QEA first; if none does,
+// the one with the most headroom at the end of the period. (Picking the best
+// algorithm year by year gives the same lines: on the current sheet the best
+// algorithm never changes within the period on any problem.)
+function bestOf(series) {
+    let best = null;
+    series.forEach((s, k) => {
+        if (Number.isFinite(s.qea) && (best === null || s.qea < series[best].qea)) best = k;
+    });
+    if (best === null) {
+        const last = s => s.values[s.values.length - 1];
+        series.forEach((s, k) => {
+            const v = last(s);
+            if (v !== null && v !== -Infinity && (best === null || !(last(series[best]) >= v))) best = k;
+        });
     }
-    return { rows: rows.map(r => ({ tex: r.tex })), rowIndex: rowOf.map(r => rows.indexOf(r)) };
+    if (best === null) best = 0;
+    return {
+        algorithm: best,
+        values: series[best].values.map(v => (v === null || v === -Infinity ? null : v)),
+        // Infinity: not before 3000. null: couldn't be calculated.
+        qea: series[best].qea,
+    };
 }
 
 /**
  * Everything the graph needs, or null when the problem has no quantum
  * algorithm or no usable classical one.
- *   columns: [{ name, current, basedOn }]
- *   rows: [{ tex }]  (Big-O labels, bottom to top)
- *   classical: { algorithm, rowIndex }
- *   points: [{ column, candidate, row, algorithm, speed, cost }]
- *   winners: { speed: [[pointIndex...] per column], cost: [...] }
+ *   years: [year...] (quarterly, this year to YEARS_SHOWN years out)
+ *   lines: [{ name, technology, current, basedOn, speed, cost }], where speed
+ *     and cost are { algorithm (candidate index), values: [headroom | null],
+ *     qea: year | Infinity | null }
+ *   candidates: [{ name, credit, tex, custom }]
+ *   classical: { name, tex }
  */
-export function compareHardware(model, problem, hardwares) {
+export function compareHardwareOverTime(model, problem, hardwares) {
     if (!model || !problem) return null;
     const quantum = quantumCandidates(problem, model);
     const classical = fastestClassical(problem, model);
     if (!quantum.length || !classical) return null;
 
+    const years = Array.from({ length: YEARS_SHOWN * STEPS_PER_YEAR + 1 }, (_, i) => currentYear + i / STEPS_PER_YEAR);
     const columns = hardwareColumns(model, hardwares);
-    const { rows, rowIndex } = complexityRows([...quantum.map(a => a.runtimeFormula), classical.runtimeFormula]);
 
-    const points = [];
-    columns.forEach((column, c) => {
-        // Algorithms with the same formulas and qubits get the same years.
+    const lines = columns.map(column => {
+        // Algorithms with the same formulas and qubits give the same results.
         const cache = new Map();
-        quantum.forEach((algorithm, k) => {
+        const series = quantum.map(algorithm => {
             const key = [algorithm.runtimeFormula, algorithm.workFormula, algorithm.qubits].join('|');
-            if (!cache.has(key)) cache.set(key, qeaFor(model, column, classical, algorithm));
-            points.push({ column: c, candidate: k, row: rowIndex[k], algorithm, ...cache.get(key) });
+            if (!cache.has(key)) cache.set(key, seriesFor(model, column, classical, algorithm, years));
+            return cache.get(key);
         });
+        const name = column.current ? 'Current inputs' : column.name;
+        return {
+            name,
+            technology: hardwareTechnology(column.current ? column.basedOn || '' : column.name),
+            current: !!column.current,
+            basedOn: column.basedOn || null,
+            speed: bestOf(series.map(s => s.speed)),
+            cost: bestOf(series.map(s => s.cost)),
+        };
     });
 
-    const winners = { speed: [], cost: [] };
-    for (const mode of ['speed', 'cost']) {
-        columns.forEach((_, c) => {
-            const inColumn = points.map((p, i) => ({ p, i })).filter(({ p }) => p.column === c && Number.isFinite(p[mode]));
-            const earliest = Math.min(...inColumn.map(({ p }) => p[mode]));
-            winners[mode].push(inColumn.filter(({ p }) => p[mode] - earliest < 1e-6).map(({ i }) => i));
-        });
-    }
-
     return {
-        columns: columns.map(({ name, current, basedOn }) => ({ name, current: !!current, basedOn: basedOn || null })),
-        rows,
-        classical: { algorithm: classical, rowIndex: rowIndex[quantum.length] },
-        candidates: quantum.length,
-        points,
-        winners,
+        years,
+        lines,
+        candidates: quantum.map(a => ({
+            name: a.name || 'Quantum algorithm',
+            authors: a.authorsLabel || null,
+            year: a.year ?? null,
+            tex: bigOTex(a.runtimeFormula),
+            custom: !!a.custom,
+        })),
+        classical: { name: classical.name || 'Classical algorithm', tex: bigOTex(classical.runtimeFormula) },
     };
 }
