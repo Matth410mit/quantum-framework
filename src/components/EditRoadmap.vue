@@ -46,7 +46,7 @@
                         <thead class="border rounded-xl">
                             <tr class="text-gray-700">
                                 <th class="border border-slate-200 p-1">Year</th>
-                                <th class="border border-slate-200 p-1"># of {{ roadmapUnit}} qubits</th>
+                                <th class="border border-slate-200 p-1">{{ roadmapUnit === 'logical' ? 'Logical' : 'Physical' }} qubits</th>
                                 <th class="border border-slate-200 p-1">Type</th>
                                 <th class="border border-slate-200 p-1"></th>
                             </tr>
@@ -93,16 +93,6 @@
                     </div>
                 </div>
                 <div class="flex-1">
-                    <div class="flex gap-4 text-xs justify-center mb-3">
-                        <div class="flex items-center gap-1.5 text-gray-700">
-                            <div class="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
-                            <span>Physical Qubits (Solid)</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 text-gray-700">
-                            <div class="w-0 h-0 border-l-[5px] border-r-[5px] border-b-[8px] border-l-transparent border-r-transparent border-b-blue-600"></div>
-                            <span>Logical Qubits (Dashed)</span>
-                        </div>
-                    </div>
                     <QubitsRoadmap :data="dataToGraph"
                     :extrapolationType="extrapolationType"
                     :dataPointTypes="dataPointTypesMap"

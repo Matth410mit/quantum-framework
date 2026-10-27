@@ -6,9 +6,9 @@ import { compareHardwareOverTime } from './hardwareComparison';
 import { findProblem } from './problemCatalog';
 
 self.onmessage = ({ data }) => {
-    const { id, model, hardwares } = data;
+    const { id, model, hardwares, options } = data;
     try {
-        const result = compareHardwareOverTime(model, findProblem(model.problemName), hardwares);
+        const result = compareHardwareOverTime(model, findProblem(model.problemName), hardwares, options);
         self.postMessage({ id, result });
     } catch (err) {
         self.postMessage({ id, error: String(err?.message || err) });

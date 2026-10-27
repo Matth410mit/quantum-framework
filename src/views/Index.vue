@@ -2,6 +2,8 @@
 // import Models from '../components/Models.vue';
 import { e } from 'mathjs';
 import { useModelsStore } from '../store/models';
+import { useHardwaresStore } from '../store/hardwares';
+import { useComparisonStore } from '../store/comparison';
 import { shareLink } from '../store/urlState';
 import { defineAsyncComponent, onMounted, ref } from 'vue';
 
@@ -10,12 +12,16 @@ import { defineAsyncComponent, onMounted, ref } from 'vue';
 const Models = defineAsyncComponent(() => import('../components/Models.vue'));
 const Documentation = defineAsyncComponent(() => import('../components/Documentation.vue'));
 const Team = defineAsyncComponent(() => import('../components/Team.vue'));
+const HardwareComparisonPage = defineAsyncComponent(() => import('../components/HardwareComparisonPage.vue'));
 
 const models = useModelsStore();
+const hardwares = useHardwaresStore();
+// Created here so a comparison link is read (and its hardware saved) on load.
+useComparisonStore();
 
 const linkCopied = ref(false);
 async function copyShareLink() {
-    const link = shareLink(models.models);
+    const link = shareLink(models.models, hardwares.all);
     try {
         await navigator.clipboard.writeText(link);
     } catch {
@@ -28,12 +34,14 @@ async function copyShareLink() {
 const currentView = ref('index');
 const views = {
     index: 'index',
+    hardware: 'hardware',
     documentation: 'documentation',
     team: 'team'
 }
 
 const components = {
     index: Models,
+    hardware: HardwareComparisonPage,
     documentation: Documentation,
     team: Team
 }
@@ -69,8 +77,9 @@ onMounted(() => {
                     <img src="/FutureTech logo.png" class="h-10" alt="FutureTech">
                     <h1 class="text-[#1f2937] text-xl font-medium font-[Ubuntu,Helvetica,sans-serif] hidden sm:block">Quantum Economic Advantage Calculator</h1>
                 </a>
-                <div class="space-x-6 font-[Open_Sans,sans-serif]">
+                <div class="flex flex-wrap gap-x-6 gap-y-2 font-[Open_Sans,sans-serif]">
                     <a href="#" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Calculator</a>
+                    <a href="#hardware" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Hardware Comparison</a>
                     <a href="#documentation" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">How does it work?</a>
                     <a href="#team" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Team</a>
                 </div>

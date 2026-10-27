@@ -1,263 +1,119 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { PRESETS, PRESET_NAMES } from './hardwarePresets'
+import { sameHardwareFields } from './urlState'
+import { hardwareTechnology, nameWithoutTechnology } from './technology'
 
-const currentYear = new Date().getFullYear();
+// The user's own hardware is kept in this browser.
+const STORAGE_KEY = 'qea-calculator:custom-hardware'
 
-function typesByYear(roadmap, demonstratedUpTo = currentYear) {
-    const out = {};
-    for (const y of Object.keys(roadmap)) {
-        out[Number(y)] = Number(y) <= demonstratedUpTo ? 'demonstrated' : 'projected';
+function loadSaved() {
+    try {
+        const list = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]')
+        return Array.isArray(list)
+            ? list.filter(h => h && typeof h.hardwareName === 'string' && h.roadmap && !PRESET_NAMES.has(h.hardwareName))
+            : []
+    } catch {
+        return []
     }
-    return out;
 }
 
-const defaultAdvancedSlowdown = {
-    superconducting: { gateTime: 12, cpuGHz: 5, speed: 60, gateOverhead: 100, algorithmConstant: 1 },
-    trappedIon: { gateTime: 600000, cpuGHz: 5, speed: 3000000, gateOverhead: 100, algorithmConstant: 1 },
-    neutralAtom: { gateTime: 250, cpuGHz: 5, speed: 1250, gateOverhead: 100, algorithmConstant: 1 },
-};
+function save(list) {
+    try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+    } catch {
+        // Private windows and blocked storage: the hardware lasts for this visit.
+    }
+}
 
-// 2026: up to three 120-qubit Nighthawk modules (IBM roadmap). 2029 and 2033
-// are estimates: IBM gives Starling (200 logical) as "1000s" of physical
-// qubits and Blue Jay (2,000 logical) as about 10x that.
-const ibm2025Roadmap = {
-    2024: 156,
-    2025: 156,
-    2026: 360,
-    2028: 1080,
-    2029: 10000,
-    2033: 100000,
-};
-
-const iqmRoadmap = {
-    2024: 20,
-    2026: 150,
-    2027: 300,
-    2028: 1000,
-    2030: 10000,
-    2033: 1000000,
-};
-
-const quantinuumRoadmap = {
-    2024: 56,
-    2025: 98,
-    2027: 192,
-    2029: 1000,
-};
-
-// provenance: who published the roadmap numbers (see roadmapSchema.js PROVENANCES).
-const initialPresets = [
-    {
-        hardwareName: "IBM 2025 (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 264,
-        ratioImprovementRate: -23,
-        roadmap: ibm2025Roadmap,
-        dataPointTypes: typesByYear(ibm2025Roadmap, 2025),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.superconducting,
-        reference: "https://www.ibm.com/quantum/hardware#roadmap",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "Google (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 1000,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2019: 53,
-            2024: 105,
-        },
-        dataPointTypes: typesByYear({ 2019: 53, 2024: 105 }),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.superconducting,
-        reference: "Sycamore (2019), and Willow (2024).",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "Rigetti (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 1000,
-        ratioImprovementRate: -10,
-        roadmap: {
-            2018: 19,
-            2021: 40,
-            2024: 84,
-        },
-        dataPointTypes: typesByYear({ 2018: 19, 2021: 40, 2024: 84 }),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.superconducting,
-        reference: "19Q (2018), Aspen-M non-modular (2021), Ankaa-3 (2024)",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "IQM (Superconducting)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 3.78,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -23,
-        roadmap: iqmRoadmap,
-        dataPointTypes: typesByYear(iqmRoadmap, 2024),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.superconducting,
-        reference: "https://iqm.tech/technology/roadmap/",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "IonQ (Trapped Ion)",
-        penaltyInput: "1",
-        processors: 5,
-        hardwareSlowdown: 8.48,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 32,
-        ratioImprovementRate: -23,
-        roadmap: {
-            2021: 22,
-            2024: 35,
-            2028: 1024,
-        },
-        dataPointTypes: typesByYear({ 2021: 22, 2024: 35, 2028: 1024 }),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
-        reference: "https://ionq.com/blog/how-we-achieved-our-2024-performance-target-of-aq-35",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "Quantinuum (Trapped Ion)",
-        penaltyInput: "1",
-        processors: 5,
-        hardwareSlowdown: 8.48,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 32,
-        ratioImprovementRate: -23,
-        roadmap: quantinuumRoadmap,
-        dataPointTypes: typesByYear(quantinuumRoadmap, 2025),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
-        reference: "https://www.quantinuum.com/press-releases/quantinuum-unveils-accelerated-roadmap-to-achieve-universal-fault-tolerant-quantum-computing-by-2030",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "QuEra (Neutral Atom)",
-        penaltyInput: "1",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -23,
-        // Aquila (2022), then the Jan 2024 roadmap: 3,000 (2025), 10,000 (2026).
-        roadmap: {
-            2022: 256,
-            2025: 3000,
-            2026: 10000,
-        },
-        dataPointTypes: typesByYear({ 2022: 256, 2025: 3000, 2026: 10000 }, 2024),
-        roadmapUnit: "physical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
-        reference: "https://www.quera.com/qec",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "Pasqal (Neutral Atom)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 100,
-        ratioImprovementRate: -10,
-        // Logical qubits from Pasqal's 2025 roadmap. Its physical-qubit targets
-        // contradict each other (10,000 in 2028 in one place, 2030 in another).
-        roadmap: {
-            2025: 2,
-            2027: 20,
-            2029: 100,
-            2030: 200,
-        },
-        dataPointTypes: typesByYear({ 2025: 2, 2027: 20, 2029: 100, 2030: 200 }, 2024),
-        roadmapUnit: "logical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
-        reference: "https://www.pasqal.com/newsroom/pasqal-releases-2025-roadmap/",
-        provenance: "vendor-published",
-    },
-    {
-        hardwareName: "Infleqtion (Neutral Atom)",
-        penaltyInput: "sqrt(q)",
-        processors: 5,
-        hardwareSlowdown: 5.1,
-        costFactor: 8,
-        quantumImprovementRate: -10,
-        costImprovementRate: -10,
-        physicalLogicalQubitsRatio: 800,
-        ratioImprovementRate: -10,
-        // 30 logical qubits shown in Sept 2026; 100 by 2028 and 1,000 by 2030.
-        roadmap: {
-            2026: 30,
-            2028: 100,
-            2030: 1000,
-        },
-        dataPointTypes: typesByYear({ 2026: 30, 2028: 100, 2030: 1000 }),
-        roadmapUnit: "logical",
-        extrapolationType: "exponential",
-        advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
-        reference: "https://thequantuminsider.com/2026/09/24/infleqtion-achieves-30-entangled-logical-qubits-on-its-sqale-quantum-computer/",
-        provenance: "third-party",
-    },
-];
+function copy(value) {
+    return JSON.parse(JSON.stringify(value))
+}
 
 export const useHardwaresStore = defineStore('hardwares', () => {
-    const presets = ref(initialPresets);
-    const imported = ref([]);
+    const presets = ref(PRESETS)
+    // Hardware the user made: edited copies of presets ("IBM 2025 (edited)")
+    // and imported roadmaps. Share links carry the ones they use.
+    const custom = ref(loadSaved())
+    watch(custom, save, { deep: true })
 
-    const all = computed(() => [...presets.value, ...imported.value]);
+    const all = computed(() => [...presets.value, ...custom.value])
+
+    function find(name) {
+        return all.value.find(h => h.hardwareName === name) || null
+    }
+
+    function isCustom(hardware) {
+        const name = typeof hardware === 'string' ? hardware : hardware?.hardwareName
+        return custom.value.some(h => h.hardwareName === name)
+    }
 
     function uniqueName(name) {
-        const existing = new Set(all.value.map(h => h.hardwareName));
-        if (!existing.has(name)) return name;
-        let i = 2;
-        while (existing.has(`${name} (${i})`)) i++;
-        return `${name} (${i})`;
+        const existing = new Set(all.value.map(h => h.hardwareName))
+        if (!existing.has(name)) return name
+        let i = 2
+        while (existing.has(`${name} (${i})`)) i++
+        return `${name} (${i})`
+    }
+
+    // Returns the stored (reactive) copy.
+    function addCustom(hardware) {
+        custom.value.push({ ...copy(hardware), hardwareName: uniqueName(hardware.hardwareName) })
+        return custom.value[custom.value.length - 1]
     }
 
     function addImported(hardware) {
-        const named = { ...hardware, hardwareName: uniqueName(hardware.hardwareName) };
-        imported.value.push(named);
-        return named;
+        return addCustom(hardware)
     }
 
-    return { presets, imported, all, addImported };
-});
+    // A copy of a preset with the settings in fields, named after it:
+    // "IBM 2025 (Superconducting)" -> "IBM 2025 (edited)", "IBM 2025 (edited 2)".
+    function addEdited(base, fields) {
+        const stem = nameWithoutTechnology(base.hardwareName)
+        const taken = new Set(all.value.map(h => h.hardwareName))
+        let name = `${stem} (edited)`
+        for (let i = 2; taken.has(name); i++) name = `${stem} (edited ${i})`
+        return addCustom({
+            ...copy(base),
+            ...copy(fields),
+            hardwareName: name,
+            technology: hardwareTechnology(base),
+            basedOn: base.hardwareName,
+            provenance: 'user-entered',
+        })
+    }
+
+    function updateCustom(name, fields) {
+        const hardware = custom.value.find(h => h.hardwareName === name)
+        if (hardware) Object.assign(hardware, copy(fields))
+        return hardware || null
+    }
+
+    // Returns an error message, or null when renamed.
+    function renameCustom(name, newName) {
+        const hardware = custom.value.find(h => h.hardwareName === name)
+        const trimmed = String(newName ?? '').trim()
+        if (!hardware) return 'This hardware can no longer be found.'
+        if (!trimmed) return 'Enter a name.'
+        if (trimmed !== name && find(trimmed)) return `"${trimmed}" is already taken.`
+        hardware.hardwareName = trimmed
+        return null
+    }
+
+    function removeCustom(name) {
+        custom.value = custom.value.filter(h => h.hardwareName !== name)
+    }
+
+    // Hardware described in a share link: the saved one with that name when its
+    // settings match, otherwise a new copy (renamed if the name is taken).
+    function adoptShared(hardware) {
+        const existing = find(hardware.hardwareName)
+        if (existing && sameHardwareFields(existing, hardware)) return existing
+        return addCustom(hardware)
+    }
+
+    return {
+        presets, custom, all,
+        find, isCustom, addCustom, addImported, addEdited, updateCustom, renameCustom, removeCustom, adoptShared,
+    }
+})

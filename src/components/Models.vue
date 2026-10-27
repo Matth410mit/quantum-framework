@@ -10,7 +10,6 @@ import * as math from 'mathjs';
 const QuantumAdvantageGraph = defineAsyncComponent(() => import('./QuantumAdvantageGraph.vue'));
 const QuantumEconomicAdvantageGraph = defineAsyncComponent(() => import('./QuantumEconomicAdvantageGraph.vue'));
 const QuantumCharacteristicsGraph = defineAsyncComponent(() => import('./QuantumCharacteristicsGraph.vue'));
-const HardwareComparisonGraph = defineAsyncComponent(() => import('./HardwareComparisonGraph.vue'));
 const Form = defineAsyncComponent(() => import('./Form.vue'));
 
 const currentYear = new Date().getFullYear();
@@ -407,6 +406,7 @@ function calculateQuantumEconomicAdvantage(model) {
         tCostStar: quantumEconomicAdvantageDataAux.tCostStar,
         tStar: quantumEconomicAdvantageDataAux.tStar,
         roadmap: model.roadmap,
+        dataPointTypes: model.dataPointTypes,
         extrapolationType: model.extrapolationType,
         physicalLogicalQubitsRatio: physicalLogicalQubitsRatio,
         ratioImprovementRate: ratioImprovementRate,
@@ -428,7 +428,14 @@ const showCostLines = ref(true);
 
 
 // watch problems and hardwareslowdown
+// The graphs don't use the hardware's name, so a rename (or an edit turning
+// "IBM 2025" into "IBM 2025 (edited)" a moment later) doesn't redraw them.
+// Redrawing twice in one update breaks the charts.
+let lastInputs = null;
 watch(() => props.model, (model) => {
+    const inputs = JSON.stringify({ ...model, hardwareName: undefined });
+    if (inputs === lastInputs) return;
+    lastInputs = inputs;
     try {
         calculateCurrentAdvantage(props.model);
     } catch (err) {
@@ -504,16 +511,6 @@ watch(() => props.model, (model) => {
             <DisclosurePanel class="text-gray-500">
                 <QuantumCharacteristicsGraph :data="roadmapCharacteristicsData" />
 
-            </DisclosurePanel>
-        </Disclosure>
-        <Disclosure as="div" class="px-8 py-2" v-slot="{ open }" defaultOpen>
-            <DisclosureButton
-                class="py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 text-left px-4 rounded-md flex justify-between w-full border border-gray-200">
-                Hardware Comparison
-                <span>{{ open ? '-' : '+' }}</span>
-            </DisclosureButton>
-            <DisclosurePanel class="text-gray-500">
-                <HardwareComparisonGraph :model="model" />
             </DisclosurePanel>
         </Disclosure>
 

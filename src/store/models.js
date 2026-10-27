@@ -64,12 +64,13 @@ function deepClone(obj) {
 }
 
 export const useModelsStore = defineStore('models', () => {
+    const hardwares = useHardwaresStore()
     // A shared link (?setup=...) restores its models; otherwise start with one.
     const models = ref(
-        readSetupFromUrl(modelTemplate, useHardwaresStore().all) || [deepClone(modelTemplate)]
+        readSetupFromUrl(modelTemplate, hardwares.all, hardwares.adoptShared) || [deepClone(modelTemplate)]
     )
 
-    watch(models, (value) => writeSetupToUrl(value, modelTemplate), { deep: true })
+    watch(models, (value) => writeSetupToUrl(value, modelTemplate, hardwares.all), { deep: true })
 
     function addModel() {
         const model = deepClone(modelTemplate)

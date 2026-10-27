@@ -1,27 +1,70 @@
-# Hardware comparison graph
+# Hardware comparison page
 
-The "Hardware Comparison" section under each model compares the hardware
-presets over time for that model's problem.
+The "Hardware Comparison" page (top bar, `#hardware`) compares every hardware
+over time on one problem.
 
-- **x-axis:** years, from this year to 15 years out (2026–2041 in 2026).
-- **One line per hardware:** each preset and imported roadmap, plus a
-  "Current inputs" line when the model's hardware settings no longer match the
-  preset they came from. Colour shows the technology (superconducting, trapped
-  ion, neutral atom, semiconductor, other) and the dash pattern shows the
-  vendor. Clicking a legend entry hides that line.
-- **y-axis:** the largest problem the hardware can run that year, divided by
-  the smallest problem where quantum beats classical (log scale). It's the gap
-  between the feasibility line and the advantage line on the QEA graph. A line
-  crosses 1× in that hardware's QEA year, which is marked with a dot and shown
-  in the legend.
+- **Problem:** starts on the calculator's first problem and follows it until a
+  problem is picked on this page.
+- **Quantum algorithm:** "Best for each hardware" (the default) or one
+  algorithm used on every hardware.
+- **Classical algorithm:** "Fastest classical" (the default) or one algorithm.
+- **Hardware:** a checkbox list grouped by technology, all ticked to start,
+  with Select all and Clear. Clicking a legend entry unticks that hardware.
 - **Speed / Cost:** whether "beats classical" means faster (runtime with the
   hardware slowdown) or cheaper (work with the cost factor). Speed is the
   default.
+- **x-axis:** years, from this year to 15 years out (2026–2041 in 2026).
+- **One line per hardware:** every preset and the user's own hardware (see
+  below). Colour shows the technology (superconducting, trapped ion, neutral
+  atom, semiconductor, other) and the dash pattern shows the vendor.
+- **y-axis:** the largest problem the hardware can run that year, divided by
+  the smallest problem where quantum beats classical (log scale). It's the gap
+  between the feasibility line and the advantage line on the QEA graph. A line
+  crosses 1× in that hardware's QEA year, which is marked with a dot. The
+  legend gives each hardware's QEA year.
 - **Table view:** hardware, algorithm, its complexity and the QEA year.
+- **Links:** the choices are kept in the page address (`?compare=...`), so a
+  reload keeps them. "Copy link to this comparison" also carries the user's
+  own hardware that is shown, so the person opening it sees the same lines.
 
-Code: `src/store/hardwareComparison.js` (calculation, run in a web worker),
-`src/components/HardwareComparisonGraph.vue` (graph), and `src/store/qea.js`
-(QEA math shared with the other graphs).
+Code: `src/components/HardwareComparisonPage.vue` (page and choices),
+`src/store/comparison.js` (the choices and the link), `src/store/hardwareComparison.js`
+(calculation, run in a web worker), `src/components/HardwareComparisonGraph.vue`
+(graph), and `src/store/qea.js` (QEA math shared with the other graphs).
+
+## The user's own hardware
+
+Changing any hardware setting of a preset in the calculator (roadmap,
+slowdown, qubit ratio, penalty, cost, ...) makes a copy of it named after it,
+"IBM 2025 (edited)", then "(edited 2)", and selects it. Further changes edit
+that copy. Imported roadmaps are the user's own hardware too. Under the
+hardware dropdown, the user can rename or delete their own hardware. Models
+using deleted hardware switch back to the preset it was copied from.
+
+The user's hardware is saved in the browser (`localStorage`), so it is there
+after a reload, and appears on the comparison page with the presets. A copy
+keeps its preset's technology, so it is grouped and coloured with it. Share
+links (calculator and comparison) carry the settings of the user's hardware
+they use. Opening one adds that hardware to the receiver's list, renamed if
+the name is taken by different hardware.
+
+Code: `src/store/hardwares.js` (the list and its storage),
+`src/store/hardwarePresets.js` (the presets), `src/store/urlState.js` (links).
+
+## Roadmap notation
+
+The Edit roadmap chart and the Quantum Timelines chart draw roadmaps the same
+way (`src/store/roadmapNotation.js`):
+
+- **Filled dot:** demonstrated, a machine that exists.
+- **Hollow dot:** projected, on the vendor's roadmap.
+- **Solid line:** between roadmap points.
+- **Dashed line:** extrapolated outside the roadmap.
+- **Colour:** physical qubits light red, logical qubits dark red.
+- **Labels:** counts as powers of ten (10^4), years as whole years.
+
+A roadmap counted in logical qubits has no physical qubits line in Quantum
+Timelines. It used to draw its logical counts as a "Physical Qubits" line.
 
 ## Why this y-axis
 
@@ -61,17 +104,17 @@ These are kept out of the UI on purpose.
   Spanning Tree, and DAGs for Shortest Path.
 - **Quantum candidates:** the problem's quantum algorithms that the calculator
   can evaluate, minus approximate and heuristic-based ones. The calculator's
-  default is always included. If the model's quantum formula isn't one of
-  them (typed by hand), it's added as "Your formula", with the model's
-  qubits-needed formula.
-- **Classical baseline:** the single classical algorithm whose runtime grows
-  slowest as n grows (with p = 1). The pool is the problem's classical
-  algorithms minus approximate, heuristic-based and parallel ones (so special
-  cases such as planar graphs or non-comparison sorts don't win). The default
-  is always included, and so is the model's own formula if typed by hand.
-- **Hardware lines:** each line is a copy of the model with that preset's
-  fields applied, exactly as picking it in the hardware dropdown does. The
-  rest of the model (max compute time, ...) is kept.
+  default is always included. These are also the choices in the Quantum
+  algorithm dropdown.
+- **Classical baseline:** "Fastest classical" is the single classical
+  algorithm whose runtime grows slowest as n grows (with p = 1). The pool is
+  the problem's classical algorithms minus approximate, heuristic-based and
+  parallel ones (so special cases such as planar graphs or non-comparison
+  sorts don't win). The default is always included. The Classical algorithm
+  dropdown offers the same pool.
+- **Hardware lines:** each line is the problem with its recommended
+  algorithms and that hardware's settings applied, exactly as picking it in
+  the calculator's hardware dropdown does. There is no maximum compute time.
 - **Qubits:** each quantum algorithm uses its own qubits-needed formula from
   the sheet, falling back to the problem's.
 - **Gaps:** a year where quantum doesn't win at any problem size has no point,

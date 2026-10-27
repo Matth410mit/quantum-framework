@@ -24,7 +24,8 @@ import {
     isModifiedFromDefaults, qubitsNeededFor, algorithmCredit,
 } from '../store/problemCatalog';
 import { hardwareToRoadmap, roadmapToQubitSeries } from '../store/roadmapSchema.js';
-import { applyHardwareToModel } from '../store/urlState';
+import { applyHardwareToModel, hardwareFieldsOf, sameHardwareFields } from '../store/urlState';
+import { technologyFromModality } from '../store/technology';
 
 
 const models = useModelsStore();
@@ -103,9 +104,68 @@ onMounted(() => {
     model.value = Object.assign({}, models.models.find(m => m.id === props.modelId))
 });
 
+// Picking hardware applies its settings. Deep, so the model also follows
+// changes to hardware the user made (an edit from another model, a rename).
 watch(() => selectedHardware.value, (hardware) => {
-    applyHardwareToModel(model.value, hardware);
+    if (!hardware) return;
+    if (model.value.hardwareName !== hardware.hardwareName || !sameHardwareFields(model.value, hardware)) {
+        applyHardwareToModel(model.value, hardware);
+    }
 }, { deep: true });
+
+// Editing any hardware setting (roadmap, slowdown, qubit ratio, ...) of a
+// preset makes the user's own copy of it, named after it, and selects it.
+// Further edits change that copy. Called before the model is saved, so the
+// edit and the new name reach the store (and the graphs) together.
+function keepHardwareInStep() {
+    const current = selectedHardware.value;
+    const fields = hardwareFieldsOf(model.value);
+    if (!current || sameHardwareFields(fields, current)) return;
+    if (hardwaresStore.isCustom(current)) {
+        hardwaresStore.updateCustom(current.hardwareName, fields);
+        return;
+    }
+    const edited = hardwaresStore.addEdited(current, fields);
+    model.value.hardwareName = edited.hardwareName;
+    selectedHardware.value = edited;
+}
+
+// The user's own hardware can be renamed and deleted.
+const selectedIsCustom = computed(() => hardwaresStore.isCustom(selectedHardware.value));
+const renaming = ref(false);
+const newHardwareName = ref('');
+const renameError = ref('');
+
+function startRename() {
+    newHardwareName.value = selectedHardware.value?.hardwareName || '';
+    renameError.value = '';
+    renaming.value = true;
+}
+
+function saveRename() {
+    const error = hardwaresStore.renameCustom(selectedHardware.value.hardwareName, newHardwareName.value);
+    if (error) {
+        renameError.value = error;
+        return;
+    }
+    model.value.hardwareName = selectedHardware.value.hardwareName;
+    renaming.value = false;
+}
+
+function deleteSelectedHardware() {
+    const hardware = selectedHardware.value;
+    if (!hardware || !window.confirm(`Delete "${hardware.hardwareName}"? Models using it switch to ${hardware.basedOn || hardwaresStore.presets[0].hardwareName}.`)) return;
+    hardwaresStore.removeCustom(hardware.hardwareName);
+}
+
+// When the selected hardware is deleted (here or from another model), switch
+// to the preset it was made from.
+watch(hardwares, (list) => {
+    const current = selectedHardware.value;
+    if (!current || list.some(h => h.hardwareName === current.hardwareName)) return;
+    renaming.value = false;
+    selectedHardware.value = (current.basedOn && list.find(h => h.hardwareName === current.basedOn)) || hardwaresStore.presets[0];
+});
 
 watch(() => selectedProblem.value, (problem) => {
     if (!problem) return;
@@ -132,6 +192,7 @@ watch(() => selectedProblem.value, (problem) => {
 }, { deep: true });
 
 watch(() => model.value, (value) => {
+    keepHardwareInStep();
     models.updateModel(props.modelId, value);
 }, { deep: true });
 
@@ -203,6 +264,7 @@ function handleImportSuccess({ roadmaps, settings = [], notes = [] }) {
             advancedSlowdown: m.advancedSlowdown,
             reference: rm.source?.url || rm.source?.citation || '',
             provenance: rm.provenance,
+            technology: technologyFromModality(rm.modality),
             // Kept so a re-export writes back exactly what the file reported.
             roadmapRecord: rm,
             importedSeries: series,
@@ -368,6 +430,22 @@ function onAlgorithmChange(type, algorithm) {
                     v-model="selectedHardware" :options="hardwares" :searchable="true" :close-on-select="true"
                     :allowEmpty="false" :show-labels="false" placeholder="Pick a hardware provider">
                 </multiselect>
+                <div v-if="selectedIsCustom" class="mt-1 text-xs text-gray-600">
+                    <div v-if="!renaming" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span v-if="selectedHardware.basedOn">Your copy of {{ selectedHardware.basedOn }}</span>
+                        <span v-else-if="selectedHardware.roadmapRecord">Imported roadmap</span>
+                        <span v-else>Your hardware</span>
+                        <button type="button" class="underline hover:text-gray-900" @click="startRename">Rename</button>
+                        <button type="button" class="underline hover:text-red-700" @click="deleteSelectedHardware">Delete</button>
+                    </div>
+                    <form v-else class="flex flex-wrap items-center gap-2" @submit.prevent="saveRename">
+                        <input v-model="newHardwareName" class="min-w-0 flex-1 rounded border border-gray-300 px-1 py-0.5"
+                            aria-label="Hardware name" />
+                        <button type="submit" class="underline hover:text-gray-900">Save</button>
+                        <button type="button" class="underline hover:text-gray-900" @click="renaming = false">Cancel</button>
+                        <span v-if="renameError" class="w-full text-red-700">{{ renameError }}</span>
+                    </form>
+                </div>
 
             </div>
 
@@ -499,12 +577,28 @@ function onAlgorithmChange(type, algorithm) {
                         v-model="selectedHardware" :options="hardwares" :searchable="true" :close-on-select="true"
                         :allowEmpty="false" :show-labels="false" placeholder="Pick a hardware provider">
                     </multiselect>
+                    <div v-if="selectedIsCustom" class="mt-1 text-xs text-gray-600">
+                        <div v-if="!renaming" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span v-if="selectedHardware.basedOn">Your copy of {{ selectedHardware.basedOn }}</span>
+                            <span v-else-if="selectedHardware.roadmapRecord">Imported roadmap</span>
+                            <span v-else>Your hardware</span>
+                            <button type="button" class="underline hover:text-gray-900" @click="startRename">Rename</button>
+                            <button type="button" class="underline hover:text-red-700" @click="deleteSelectedHardware">Delete</button>
+                        </div>
+                        <form v-else class="flex flex-wrap items-center gap-2" @submit.prevent="saveRename">
+                            <input v-model="newHardwareName" class="min-w-0 flex-1 rounded border border-gray-300 px-1 py-0.5"
+                                aria-label="Hardware name" />
+                            <button type="submit" class="underline hover:text-gray-900">Save</button>
+                            <button type="button" class="underline hover:text-gray-900" @click="renaming = false">Cancel</button>
+                            <span v-if="renameError" class="w-full text-red-700">{{ renameError }}</span>
+                        </form>
+                    </div>
 
                     <table class="w-full table-auto mt-4 text-xs">
                         <thead class="bg-gray-100">
                             <tr class="text-left">
                                 <th>Year</th>
-                                <th># of {{ model.roadmapUnit }} Qubits</th>
+                                <th>{{ model.roadmapUnit === 'logical' ? 'Logical' : 'Physical' }} qubits</th>
                             </tr>
                         </thead>
                         <tbody class="text-left">

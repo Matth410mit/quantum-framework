@@ -2,7 +2,8 @@
 // One line per hardware over time: how far the largest problem it can run is
 // past the smallest problem where quantum wins (speed or cost). A line crosses
 // 1× in that hardware's QEA year. The calculation is in
-// store/hardwareComparison.js.
+// store/hardwareComparison.js; the page around it is HardwareComparisonPage.vue,
+// which owns the choices (mode, hidden hardware) so it can put them in links.
 import { Chart } from 'highcharts-vue'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
@@ -12,23 +13,36 @@ import * as utils from '../store/utils'
 import { useHardwaresStore } from '../store/hardwares'
 import { findProblem } from '../store/problemCatalog'
 import { compareHardwareOverTime, technologyLabel, TECHNOLOGY_ORDER, YEARS_SHOWN } from '../store/hardwareComparison'
+import { nameWithoutTechnology } from '../store/technology'
 
 const props = defineProps({
+    // The problem and algorithms; each line applies one hardware to a copy.
     model: Object,
+    // An algorithm key, or null for the automatic choice.
+    quantumKey: { type: String, default: null },
+    classicalKey: { type: String, default: null },
+    // 'speed' | 'cost'
+    mode: { type: String, default: 'speed' },
+    // Names of the hardware not drawn.
+    hidden: { type: Array, default: () => [] },
 })
+const emit = defineEmits(['update:mode', 'update:hidden'])
 
 const hardwaresStore = useHardwaresStore()
 const currentYear = new Date().getFullYear()
 const lastYear = currentYear + YEARS_SHOWN
 
-const mode = ref('speed') // 'speed' | 'cost'
+const mode = computed({
+    get: () => props.mode,
+    set: value => emit('update:mode', value),
+})
 const result = ref(null)
 const loading = ref(false)
 const failed = ref(false)
 const showTable = ref(false)
-// Lines the reader unticked, by line key. Kept as "hidden" so hardware added
-// later (an import, an edited preset) shows up ticked.
-const hidden = ref(new Set())
+// Lines the reader unticked, by hardware name. Kept as "hidden" so hardware
+// added later (an import, an edited preset) shows up ticked.
+const hidden = computed(() => new Set(props.hidden))
 
 // Colour = technology (categorical slots 1-4), dash = vendor within it.
 const TECH_COLORS = {
@@ -74,17 +88,18 @@ function recalculate() {
     const id = ++requestId
     const model = JSON.parse(JSON.stringify(props.model))
     const hardwares = JSON.parse(JSON.stringify(hardwaresStore.all))
+    const options = { quantumKey: props.quantumKey, classicalKey: props.classicalKey }
     loading.value = true
     if (!worker) startWorker()
     if (worker) {
-        worker.postMessage({ id, model, hardwares })
+        worker.postMessage({ id, model, hardwares, options })
         return
     }
     // No worker support: calculate on the main thread.
     setTimeout(() => {
         if (id !== requestId) return
         try {
-            result.value = compareHardwareOverTime(model, findProblem(model.problemName), hardwares)
+            result.value = compareHardwareOverTime(model, findProblem(model.problemName), hardwares, options)
             failed.value = false
         } catch (err) {
             console.warn('Hardware comparison failed:', err)
@@ -95,7 +110,7 @@ function recalculate() {
     }, 0)
 }
 
-watch(() => [props.model, hardwaresStore.all], () => {
+watch(() => [props.model, props.quantumKey, props.classicalKey, hardwaresStore.all], () => {
     clearTimeout(debounce)
     // A newer request makes a running one useless: stop it.
     if (worker && loading.value) {
@@ -143,13 +158,12 @@ function legendQea(year) {
 
 // Identifies a line across recalculations; hardware names are unique.
 function lineKey(line) {
-    return line.current ? 'current-inputs' : line.name
+    return line.name
 }
 
-// "IonQ (Trapped Ion)" -> "IonQ"
+// "IonQ (Trapped Ion)" -> "IonQ"; "IBM 2025 (edited)" stays.
 function shortName(line) {
-    if (line.current) return 'Current inputs'
-    return line.name.replace(/\s*\([^)]*\)\s*$/, '') || line.name
+    return nameWithoutTechnology(line.name)
 }
 
 // The tooltip's line key in CSS terms.
@@ -167,7 +181,7 @@ function algorithmLabel(candidate) {
 // Lines grouped by technology, so the legend reads in groups.
 const orderedLines = computed(() => {
     const lines = (result.value?.lines || []).map((line, index) => ({ ...line, index }))
-    const rank = line => line.current ? TECHNOLOGY_ORDER.length : TECHNOLOGY_ORDER.indexOf(line.technology)
+    const rank = line => TECHNOLOGY_ORDER.indexOf(line.technology)
     return lines.sort((a, b) => rank(a) - rank(b) || a.index - b.index)
 })
 
@@ -175,10 +189,6 @@ const lineStyles = computed(() => {
     const used = {}
     const styles = new Map()
     for (const line of orderedLines.value) {
-        if (line.current) {
-            styles.set(line.index, { color: INK, dashStyle: 'Solid', width: 3 })
-            continue
-        }
         const n = used[line.technology] = (used[line.technology] ?? -1) + 1
         styles.set(line.index, { color: TECH_COLORS[line.technology] || TECH_COLORS.other, dashStyle: DASHES[n % DASHES.length], width: 2 })
     }
@@ -191,10 +201,10 @@ const visibleLines = computed(() => orderedLines.value.filter(line => !hidden.va
 const hardwareGroups = computed(() => {
     const groups = []
     for (const line of orderedLines.value) {
-        const label = line.current ? 'Your inputs' : technologyLabel(line.technology)
+        const label = technologyLabel(line.technology)
         let group = groups.at(-1)
         if (!group || group.label !== label) groups.push(group = { label, lines: [] })
-        group.lines.push({ key: lineKey(line), name: line.current ? 'Current inputs' : line.name })
+        group.lines.push({ key: lineKey(line), name: line.name })
     }
     return groups
 })
@@ -205,11 +215,11 @@ function setShown(key, shown) {
     const next = new Set(hidden.value)
     if (shown) next.delete(key)
     else next.add(key)
-    hidden.value = next
+    emit('update:hidden', [...next])
 }
 
 function showAll(shown) {
-    hidden.value = shown ? new Set() : new Set(orderedLines.value.map(lineKey))
+    emit('update:hidden', shown ? [] : orderedLines.value.map(lineKey))
 }
 
 const hasValues = computed(() =>
@@ -384,7 +394,7 @@ const tableRows = computed(() => {
         const entry = line[mode.value]
         const candidate = data.candidates[entry.algorithm]
         return {
-            hardware: line.current ? `Current inputs${line.basedOn ? ` (based on ${line.basedOn})` : ''}` : line.name,
+            hardware: line.basedOn ? `${line.name} (copy of ${line.basedOn})` : line.name,
             technology: technologyLabel(line.technology),
             algorithm: algorithmLabel(candidate),
             complexity: candidate ? tex(candidate.tex) : '',
@@ -398,7 +408,7 @@ const tableRows = computed(() => {
     <div class="py-2">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
             <div class="text-sm text-gray-700">
-                When each hardware reaches quantum economic advantage, using its best algorithm
+                When each hardware reaches quantum economic advantage{{ quantumKey ? '' : ', using its best quantum algorithm' }}
             </div>
             <div class="flex items-center gap-3">
                 <span v-if="loading" class="text-xs text-gray-500">Calculating…</span>
@@ -447,7 +457,7 @@ const tableRows = computed(() => {
                 Above 1×, the hardware can run problems bigger than the smallest one where quantum is
                 {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical. Dots mark each hardware's QEA year.
             </div>
-            <div>Compared with the fastest classical algorithm: <span v-html="classicalHtml"></span></div>
+            <div>Compared with {{ classicalKey ? '' : 'the fastest classical algorithm:' }} <span v-html="classicalHtml"></span></div>
         </div>
 
         <div v-if="result && hasValues" :class="['transition-opacity', loading ? 'opacity-60' : '']">
