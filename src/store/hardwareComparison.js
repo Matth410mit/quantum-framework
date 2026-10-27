@@ -7,13 +7,14 @@
  *
  * Modelling choices (kept here and in docs/hardware-comparison.md, not in the UI):
  * - Each line uses one quantum algorithm: the one that reaches QEA first on
- *   that hardware (see bestOf). Candidates: the problem's quantum algorithms,
- *   minus approximate and heuristic-based ones, plus the model's own formula
- *   when it isn't one of them. The calculator's default is always a candidate.
+ *   that hardware (see bestOf). Candidates: the problem's quantum algorithms
+ *   for its own variation or the general problem (see sameVersion), minus
+ *   approximate and heuristic-based ones, plus the model's own formula when it
+ *   isn't one of them. The calculator's default is always a candidate.
  * - Classical baseline: the single classical algorithm whose runtime grows
- *   slowest as n grows (p = 1), from the same pool minus parallel algorithms
- *   and other variations of the problem (planar graphs, non-comparison sorts),
- *   plus the model's own classical formula when it isn't one of them.
+ *   slowest as n grows (p = 1), from the same kind of pool minus parallel
+ *   algorithms, plus the model's own classical formula when it isn't one of
+ *   them.
  * - Each hardware line applies that preset's fields to a copy of the model
  *   (as the hardware dropdown does). Everything else (max compute time, ...)
  *   stays as the model has it. Each quantum algorithm uses its own qubit count.
@@ -26,6 +27,8 @@ import * as utils from './utils';
 import { getAlgorithmOptions, isFormulaValid, qubitsNeededFor } from './problemCatalog';
 import { applyHardwareToModel } from './urlState';
 import { quantumEconomicAdvantage } from './qea';
+import { SHEET_PROBLEMS } from './sheetSync/problems.config';
+import { variationKey, variationKeys } from './sheetSync/variations';
 
 const currentYear = new Date().getFullYear();
 
@@ -154,9 +157,24 @@ function matchesModel(algo, runtime, work) {
     return algo.runtimeFormula === runtime && algo.workFormula === work;
 }
 
+// Only algorithms for the problem's own version, on both sides: its Variation
+// (compared by meaning, as the sync does, so rewordings and notes like
+// "(Adjacency List Model)" still match) or the general problem. The pickers
+// also list special or easier cases (planar graphs, DAGs, verifying an MST,
+// undirected components for SCCs, max-weight instead of maximal cliques)
+// that would otherwise win.
+function sameVersion(problem, options) {
+    if (!problem.variation) return options;
+    const sheet = SHEET_PROBLEMS.find(p => p.problemName === problem.problemName) || { problemName: problem.problemName };
+    const target = variationKey(problem.variation, sheet);
+    const kept = options.filter(a => a.recommended || !a.variation
+        || [...variationKeys(a, sheet)].some(key => key === target || key === ''));
+    return kept.length ? kept : options;
+}
+
 export function quantumCandidates(problem, model) {
-    const options = getAlgorithmOptions(problem, 'quantum')
-        .filter(a => a.recommended || (!a.approximate && !a.heuristic))
+    const options = sameVersion(problem, getAlgorithmOptions(problem, 'quantum')
+        .filter(a => a.recommended || (!a.approximate && !a.heuristic)))
         .map(a => ({ ...a, qubits: qubitsNeededFor(problem, a) }));
     const own = { runtime: model.quantumRuntimeInput, work: model.quantumWork };
     if (isFormulaValid(own.runtime) && isFormulaValid(own.work)
@@ -174,14 +192,8 @@ export function quantumCandidates(problem, model) {
 }
 
 export function fastestClassical(problem, model) {
-    let options = getAlgorithmOptions(problem, 'classical')
-        .filter(a => a.recommended || (!a.approximate && !a.heuristic && !a.parallel));
-    // Only the problem's own variation: the pickers also list special cases
-    // (planar graphs, non-comparison sorts) that would otherwise always win.
-    if (problem.variation) {
-        const sameVariation = options.filter(a => a.recommended || a.variation === problem.variation);
-        if (sameVariation.length) options = sameVariation;
-    }
+    const options = sameVersion(problem, getAlgorithmOptions(problem, 'classical')
+        .filter(a => a.recommended || (!a.approximate && !a.heuristic && !a.parallel)));
     const own = { runtime: model.classicalRuntimeInput, work: model.classicalWork };
     if (isFormulaValid(own.runtime) && isFormulaValid(own.work)
         && !options.some(a => matchesModel(a, own.runtime, own.work))) {

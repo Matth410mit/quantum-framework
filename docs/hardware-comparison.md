@@ -47,8 +47,18 @@ These are kept out of the UI on purpose.
 - **One algorithm per hardware:** the quantum algorithm that reaches QEA first
   on that hardware. If none does, it's the one with the most headroom at the
   end of the period. Picking the best algorithm year by year was checked for
-  every problem, preset, speed and cost. On the current sheet it never
-  changes within the period, so it would draw the same lines.
+  every problem, preset, speed and cost (242 cases). It changes in two:
+  String Search on IonQ and Quantinuum around 2040, where two algorithms are
+  within 0.03 orders of magnitude of each other, far below 1×. So it would
+  draw the same lines.
+- **Same version of the problem on both sides:** candidates on both sides are
+  limited to the problem's own Variation or the general problem. Variations
+  are compared by meaning, as the sheet sync does
+  (`src/store/sheetSync/variations.js`), so "Nonnegative Weights (Adjacency
+  List Model)" still matches "Nonnegative Weights". Without this, algorithms
+  for easier problems won: Max-Weight Clique for Clique, undirected connected
+  components for Strongly Connected Components, MST verification for Minimum
+  Spanning Tree, and DAGs for Shortest Path.
 - **Quantum candidates:** the problem's quantum algorithms that the calculator
   can evaluate, minus approximate and heuristic-based ones. The calculator's
   default is always included. If the model's quantum formula isn't one of
@@ -56,10 +66,9 @@ These are kept out of the UI on purpose.
   qubits-needed formula.
 - **Classical baseline:** the single classical algorithm whose runtime grows
   slowest as n grows (with p = 1). The pool is the problem's classical
-  algorithms minus approximate, heuristic-based and parallel ones, limited to
-  the problem's own variation when it has one (so special cases such as planar
-  graphs or non-comparison sorts don't win). The default is always included,
-  and so is the model's own formula if typed by hand.
+  algorithms minus approximate, heuristic-based and parallel ones (so special
+  cases such as planar graphs or non-comparison sorts don't win). The default
+  is always included, and so is the model's own formula if typed by hand.
 - **Hardware lines:** each line is a copy of the model with that preset's
   fields applied, exactly as picking it in the hardware dropdown does. The
   rest of the model (max compute time, ...) is kept.
@@ -74,11 +83,10 @@ Every candidate is evaluated on every hardware, twice a year, plus its QEA
 years: up to a few seconds for Integer Factorization (14 algorithms). It runs
 in a web worker so the page stays responsive, and uses a faster search than
 the main QEA graph. Problem size is searched in log10(n) from the bottom up,
-and the year to about a day. Across all problems and presets, the QEA years
-match the main graph's calculation to within 0.05 years in 631 of 634 checks
-(622 within 0.01). Of the other three, one is off by 0.06 years. The other two
-are cases where quantum and classical differ only by a constant factor
-(below), and neither calculation is meaningful there.
+and the year to about a day. Across all problems, presets and candidate
+algorithms, the QEA years match the main graph's calculation to within 0.05
+years in 711 of 720 checks (683 within 0.01). The other nine are QEA years
+after 2070, well past the graph, for algorithms that aren't picked.
 
 ## Known limitations
 
@@ -90,3 +98,15 @@ are cases where quantum and classical differ only by a constant factor
   Factorization, the "Brenner et al. (2025)" row is O((log n)²) with n = bits,
   so it's the best algorithm on every hardware. That looks like n meaning the
   integer itself (so log n = bits). It's worth checking with the sheet owner.
+  For String Search, Montanaro (2014) is the best on 8 of 11 presets for
+  speed. Its sheet formula has a sqrt(n/m) factor, which is the constant 3
+  with the pattern length m = n/9, so it grows slower than any polynomial.
+  That paper's result is for average-case (random) text, while the classical
+  baseline is worst-case.
+- **Formulas undefined for tiny inputs:** the QEA search starts at n = 2. Some
+  formulas aren't defined there (log(n/9) is negative below n = 9; 2n − 5
+  qubits is negative at n = 2), which used to fail the whole calculation, in
+  the main QEA graph too. The search now starts at the first size where both
+  formulas are defined. This brought in four String Search algorithms
+  (Montanaro, Niroula & Nam, Ramesh & Vinay, Ablayev et al.) and the
+  Grover-based factoring algorithm.

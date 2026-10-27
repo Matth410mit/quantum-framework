@@ -35,6 +35,13 @@ export function getQuantumAdvantage(logClassicalFunction, logQuantumFunction, lo
 
     let upperBound = 10 ** 100;
     let lowerBound = 2;
+    // Start where both formulas are defined: some aren't for tiny inputs
+    // (pattern length m = n/9 gives log(n/9) < 0 below n = 9; 2n - 5 qubits is
+    // negative at n = 2), and an undefined value at n = 2 used to fail the
+    // whole search.
+    while (lowerBound < 50 && !Number.isFinite(evaluate(lowerBound))) {
+        lowerBound += 0.25;
+    }
     let lastValue = evaluate(lowerBound);
     while (lowerBound < 50 && lastValue >= 0) {
         lowerBound += 0.25;
