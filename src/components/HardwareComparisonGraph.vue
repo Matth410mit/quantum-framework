@@ -7,6 +7,7 @@ import { Chart } from 'highcharts-vue'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue'
 import * as utils from '../store/utils'
 import { useHardwaresStore } from '../store/hardwares'
 import { findProblem } from '../store/problemCatalog'
@@ -25,6 +26,9 @@ const result = ref(null)
 const loading = ref(false)
 const failed = ref(false)
 const showTable = ref(false)
+// Lines the reader unticked, by line key. Kept as "hidden" so hardware added
+// later (an import, an edited preset) shows up ticked.
+const hidden = ref(new Set())
 
 // Colour = technology (categorical slots 1-4), dash = vendor within it.
 const TECH_COLORS = {
@@ -129,6 +133,19 @@ function formatQea(year) {
     return year.toFixed(1)
 }
 
+// The legend's QEA wording.
+function legendQea(year) {
+    if (year === null || year === undefined) return 'QEA could not be calculated'
+    if (year === Infinity) return 'no QEA before 3000'
+    if (year <= currentYear) return 'QEA already reached'
+    return `QEA ${year.toFixed(1)}`
+}
+
+// Identifies a line across recalculations; hardware names are unique.
+function lineKey(line) {
+    return line.current ? 'current-inputs' : line.name
+}
+
 // "IonQ (Trapped Ion)" -> "IonQ"
 function shortName(line) {
     if (line.current) return 'Current inputs'
@@ -168,11 +185,38 @@ const lineStyles = computed(() => {
     return styles
 })
 
+const visibleLines = computed(() => orderedLines.value.filter(line => !hidden.value.has(lineKey(line))))
+
+// The checkbox list, grouped by technology like the legend.
+const hardwareGroups = computed(() => {
+    const groups = []
+    for (const line of orderedLines.value) {
+        const label = line.current ? 'Your inputs' : technologyLabel(line.technology)
+        let group = groups.at(-1)
+        if (!group || group.label !== label) groups.push(group = { label, lines: [] })
+        group.lines.push({ key: lineKey(line), name: line.current ? 'Current inputs' : line.name })
+    }
+    return groups
+})
+
+const shownCount = computed(() => visibleLines.value.length)
+
+function setShown(key, shown) {
+    const next = new Set(hidden.value)
+    if (shown) next.delete(key)
+    else next.add(key)
+    hidden.value = next
+}
+
+function showAll(shown) {
+    hidden.value = shown ? new Set() : new Set(orderedLines.value.map(lineKey))
+}
+
 const hasValues = computed(() =>
-    (result.value?.lines || []).some(line => line[mode.value].values.some(v => v !== null)))
+    visibleLines.value.some(line => line[mode.value].values.some(v => v !== null)))
 
 const sameAlgorithmEverywhere = computed(() => {
-    const lines = result.value?.lines || []
+    const lines = visibleLines.value
     const first = lines[0]?.[mode.value].algorithm
     return lines.every(line => line[mode.value].algorithm === first) ? first : null
 })
@@ -183,7 +227,7 @@ const classicalHtml = computed(() => {
 })
 
 const yRange = computed(() => {
-    const values = (result.value?.lines || []).flatMap(line => line[mode.value].values).filter(v => v !== null)
+    const values = visibleLines.value.flatMap(line => line[mode.value].values).filter(v => v !== null)
     if (!values.length) return { min: -1, max: 1 }
     const min = Math.max(Math.floor(Math.min(...values, 0)), Y_FLOOR)
     const max = Math.min(Math.ceil(Math.max(...values, 0)), Y_CAP)
@@ -195,7 +239,7 @@ const chartOptions = computed(() => {
     if (!data) return null
     const key = mode.value
 
-    const series = orderedLines.value.map(line => {
+    const series = visibleLines.value.map(line => {
         const style = lineStyles.value.get(line.index)
         const { values, qea } = line[key]
         const points = data.years.map((year, i) => ({ x: year, y: values[i] }))
@@ -236,13 +280,16 @@ const chartOptions = computed(() => {
         legend: {
             enabled: true,
             align: 'center',
+            title: {
+                text: `Hardware and the year it reaches QEA (quantum ${key === 'speed' ? 'faster' : 'cheaper'} than classical)`,
+                style: { color: MUTED, fontWeight: 'normal', fontSize: '11px' },
+            },
             itemStyle: { color: INK, fontWeight: 'normal', fontSize: '11px' },
             itemHiddenStyle: { color: '#d1d5db' },
             symbolWidth: 28,
             labelFormatter() {
                 const line = data.lines[this.userOptions.lineIndex]
-                const qea = line[key].qea
-                return `${escapeHtml(this.name)} <span style="color:${MUTED}">${formatQea(qea)}</span>`
+                return `${escapeHtml(this.name)} <span style="color:${MUTED}">· ${legendQea(line[key].qea)}</span>`
             },
         },
         xAxis: {
@@ -316,6 +363,13 @@ const chartOptions = computed(() => {
             series: {
                 animation: false,
                 states: { inactive: { opacity: 0.35 }, hover: { lineWidthPlus: 1 } },
+                events: {
+                    // Clicking a legend entry unticks it in the hardware list.
+                    legendItemClick() {
+                        setShown(lineKey(data.lines[this.userOptions.lineIndex]), false)
+                        return false
+                    },
+                },
             },
         },
         series,
@@ -326,7 +380,7 @@ const chartOptions = computed(() => {
 const tableRows = computed(() => {
     const data = result.value
     if (!data) return []
-    return orderedLines.value.map(line => {
+    return visibleLines.value.map(line => {
         const entry = line[mode.value]
         const candidate = data.candidates[entry.algorithm]
         return {
@@ -348,6 +402,33 @@ const tableRows = computed(() => {
             </div>
             <div class="flex items-center gap-3">
                 <span v-if="loading" class="text-xs text-gray-500">Calculating…</span>
+                <Popover v-if="result" class="relative">
+                    <PopoverButton
+                        class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600 hover:bg-gray-100">
+                        Hardware: {{ shownCount }} of {{ orderedLines.length }}
+                        <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </PopoverButton>
+                    <PopoverPanel
+                        class="absolute right-0 z-20 mt-1 w-64 max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white p-2 text-xs text-gray-700 shadow-lg">
+                        <div class="flex gap-3 border-b border-gray-100 pb-1 mb-1">
+                            <button type="button" class="underline hover:text-gray-900" @click="showAll(true)">Select all</button>
+                            <button type="button" class="underline hover:text-gray-900" @click="showAll(false)">Clear</button>
+                        </div>
+                        <div v-for="group in hardwareGroups" :key="group.label" class="py-1">
+                            <div class="text-[10px] uppercase tracking-wide text-gray-400">{{ group.label }}</div>
+                            <label v-for="item in group.lines" :key="item.key"
+                                class="flex items-center gap-2 py-0.5 cursor-pointer hover:text-gray-900">
+                                <input type="checkbox" class="rounded border-gray-300" :checked="!hidden.has(item.key)"
+                                    @change="setShown(item.key, $event.target.checked)" />
+                                {{ item.name }}
+                            </label>
+                        </div>
+                    </PopoverPanel>
+                </Popover>
                 <div class="inline-flex rounded-md border border-gray-200 overflow-hidden text-xs" role="group"
                     aria-label="Compare on">
                     <button type="button" @click="mode = 'speed'" :aria-pressed="mode === 'speed'"
@@ -372,8 +453,11 @@ const tableRows = computed(() => {
         <div v-if="result && hasValues" :class="['transition-opacity', loading ? 'opacity-60' : '']">
             <Chart :options="chartOptions" />
         </div>
+        <div v-else-if="result && !shownCount" class="py-10 text-center text-sm text-gray-500">
+            No hardware selected. Pick some from the Hardware list above.
+        </div>
         <div v-else-if="result" class="py-10 text-center text-sm text-gray-500">
-            Quantum is not {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical at any problem size on any
+            Quantum is not {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical at any problem size on {{ hidden.size ? 'the selected' : 'any' }}
             hardware between {{ currentYear }} and {{ lastYear }}.
         </div>
         <div v-else-if="!loading" class="py-10 text-center text-sm text-gray-500">
