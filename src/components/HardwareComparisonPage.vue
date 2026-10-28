@@ -138,7 +138,7 @@ async function copyLink() {
             <div class="mt-4 text-gray-500">
                 <HardwareComparisonGraph :model="comparison.model"
                     :quantum-key="comparison.quantumKey" :classical-key="comparison.classicalKey"
-                    v-model:mode="comparison.mode" v-model:hidden="comparison.hidden"
+                    v-model:mode="comparison.mode" v-model:view="comparison.view" v-model:hidden="comparison.hidden"
                     @recommended="recommendedQuantumKey = $event" />
             </div>
         </div>

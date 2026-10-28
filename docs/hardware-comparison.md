@@ -1,7 +1,9 @@
 # Hardware comparison page
 
 The "Hardware Comparison" page (top bar, `#hardware`) compares every hardware
-over time on one problem.
+over time on one problem, in two graphs: the largest problem each hardware can
+run ("Problem size", the default) and how far that is past the smallest
+problem where quantum wins ("Ratio to break-even").
 
 - **Problem:** starts on the calculator's first problem and follows it until a
   problem is picked on this page.
@@ -18,12 +20,19 @@ over time on one problem.
 - **One line per hardware:** every preset and the user's own hardware (see
   below). Colour shows the technology (superconducting, trapped ion, neutral
   atom, semiconductor, other) and the dash pattern shows the vendor.
-- **y-axis:** the largest problem the hardware can run that year, divided by
-  the smallest problem where quantum beats classical (log scale). It's the gap
-  between the feasibility line and the advantage line on the QEA graph. A line
-  crosses 1× in that hardware's QEA year, which is marked with a dot. The
-  legend gives each hardware's QEA year.
-- **Table view:** hardware, algorithm, its complexity and the QEA year.
+- **y-axis, Problem size:** the largest problem the hardware can run that
+  year with its qubits and the chosen quantum algorithm (log scale). It's the
+  feasibility line of the QEA graph, one per hardware. It doesn't depend on
+  Speed / Cost or the classical algorithm; those move the QEA dots. The
+  tooltip also gives the size from which quantum wins that year.
+- **y-axis, Ratio to break-even:** the largest problem the hardware can run
+  that year, divided by the smallest problem where quantum beats classical
+  (log scale). It's the gap between the feasibility line and the advantage
+  line on the QEA graph, and crosses 1× in the QEA year.
+- **QEA:** a dot marks each hardware's QEA year, and the legend gives it.
+  Lines are faded before it and bold from it on (see Roadmap notation).
+- **Table view:** hardware, algorithm, its complexity, the QEA year and the
+  largest problem it can run in the last year.
 - **Links:** the choices are kept in the page address (`?compare=...`), so a
   reload keeps them. "Copy link to this comparison" also carries the user's
   own hardware that is shown, so the person opening it sees the same lines.
@@ -73,17 +82,21 @@ dashed before the QEA year; they are solid now, and the shaded area shows
 where quantum wins. Its time-capped view draws the uncapped feasibility as
 a thin green line instead of a dashed one.
 
-In the comparison, each line is faded until its own hardware's last
-roadmap year and full colour after it. A QEA year after that point is a
-hollow dot, is marked "beyond roadmap" in the table, and rests on the
-extrapolation.
+The comparison uses the fading for QEA instead: each line is faded before
+its hardware's QEA year and bold from it on, and faded throughout when the
+hardware doesn't reach QEA in the period. A short vertical tick marks where
+the hardware's roadmap ends. A QEA year after that point is a hollow dot, is
+marked "beyond roadmap" in the table, and rests on the extrapolation.
 
 A roadmap counted in logical qubits has no physical qubits line in Quantum
 Timelines. It used to draw its logical counts as a "Physical Qubits" line.
 
-## Why this y-axis
+## Why these y-axes
 
-Two other options were considered:
+"Problem size" was asked for directly: it shows what each hardware can do,
+and the QEA dot shows when that becomes worth it. "Ratio to break-even" puts
+every hardware's QEA on one line (1×), so the QEA years can be compared at a
+glance. Two other options were considered:
 
 - **The QEA graph's own speed and cost lines** (the problem size where quantum
   starts to win). On their own, they depend only on the hardware's slowdown
@@ -95,8 +108,10 @@ Two other options were considered:
   run.** This grows far too fast to read on one axis. For Integer
   Factorization it reaches 10^39,663× on QuEra by 2041.
 
-The y-axis is capped at 10^12×. Lines that go past it (e.g. Database Search,
-where n = 2^qubits) leave the top of the plot.
+The ratio y-axis is capped at 10^12×. The problem size y-axis goes to 10^12
+or two orders of magnitude past the highest QEA dot, whichever is higher.
+Lines that go past the cap (e.g. Database Search, where n = 2^qubits and the
+largest size reaches 10^19,660,800) leave the top of the plot.
 
 ## Modelling choices
 

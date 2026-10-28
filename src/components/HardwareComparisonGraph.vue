@@ -1,9 +1,12 @@
 <script setup>
-// One line per hardware over time: how far the largest problem it can run is
-// past the smallest problem where quantum wins (speed or cost). A line crosses
-// 1× in that hardware's QEA year. The calculation is in
-// store/hardwareComparison.js; the page around it is HardwareComparisonPage.vue,
-// which owns the choices (mode, hidden hardware) so it can put them in links.
+// One line per hardware over time, in one of two views: the largest problem it
+// can run ('size'), or how far that is past the smallest problem where quantum
+// wins, speed or cost ('ratio'), which crosses 1× in the QEA year. Lines are
+// faded until the hardware's QEA year and bold after it; a tick marks where its
+// roadmap ends. The calculation is in store/hardwareComparison.js; the page
+// around it is HardwareComparisonPage.vue, which owns the choices (view, mode,
+// hidden hardware) so it can put them in links.
+import Highcharts from 'highcharts'
 import { Chart } from 'highcharts-vue'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
@@ -24,11 +27,13 @@ const props = defineProps({
     classicalKey: { type: String, default: null },
     // 'speed' | 'cost'
     mode: { type: String, default: 'speed' },
+    // 'size' | 'ratio'
+    view: { type: String, default: 'size' },
     // Names of the hardware not drawn.
     hidden: { type: Array, default: () => [] },
 })
 // recommended: the recommended quantum algorithm's key, once calculated.
-const emit = defineEmits(['update:mode', 'update:hidden', 'recommended'])
+const emit = defineEmits(['update:mode', 'update:view', 'update:hidden', 'recommended'])
 
 const hardwaresStore = useHardwaresStore()
 const currentYear = new Date().getFullYear()
@@ -37,6 +42,10 @@ const lastYear = currentYear + YEARS_SHOWN
 const mode = computed({
     get: () => props.mode,
     set: value => emit('update:mode', value),
+})
+const view = computed({
+    get: () => props.view,
+    set: value => emit('update:view', value),
 })
 const result = ref(null)
 const loading = ref(false)
@@ -62,6 +71,14 @@ const GRID = '#f3f4f6'       // gray-100
 // Lines leave the plot above this (Database Search reaches 10^19,000,000×).
 const Y_CAP = 12
 const Y_FLOOR = -40
+// In the size view the axis goes at least to 10^12 and a little past the
+// highest QEA dot (Database Search, where n = 2^qubits, reaches 10^30 at QEA).
+const SIZE_CAP = 12
+const SIZE_HEADROOM = 2
+
+// The roadmap-end tick: a short vertical stroke through the line.
+Highcharts.SVGRenderer.prototype.symbols.roadmapEnd = (x, y, w, h) =>
+    [['M', x + w / 2, y - h / 2], ['L', x + w / 2, y + h * 1.5]]
 
 // ---------------------------------------------------------------------------
 // Calculation (in a worker when available, newest request wins)
@@ -154,6 +171,15 @@ function formatQea(year) {
     return year.toFixed(1)
 }
 
+// Line zones (zoneAxis 'x'): faded until the QEA year, bold from then on.
+// Faded throughout when the hardware doesn't reach QEA.
+function qeaZones(qea, color) {
+    const faded = fadedColor(color)
+    if (!Number.isFinite(qea)) return [{ color: faded }]
+    if (qea <= currentYear) return []
+    return [{ value: qea, color: faded }, {}]
+}
+
 // True when year is past the last point of the line's hardware roadmap.
 function beyondRoadmap(line, year) {
     return line.roadmapEnd !== null && line.roadmapEnd !== undefined && year > line.roadmapEnd
@@ -233,8 +259,13 @@ function showAll(shown) {
     emit('update:hidden', shown ? [] : orderedLines.value.map(lineKey))
 }
 
+// The values drawn for a line in the current view.
+function valuesOf(line) {
+    return view.value === 'size' ? line.sizes : line[mode.value].values
+}
+
 const hasValues = computed(() =>
-    visibleLines.value.some(line => line[mode.value].values.some(v => v !== null)))
+    visibleLines.value.some(line => valuesOf(line).some(v => v !== null)))
 
 const sameAlgorithmEverywhere = computed(() => {
     const lines = visibleLines.value
@@ -255,7 +286,14 @@ const classicalHtml = computed(() => {
 })
 
 const yRange = computed(() => {
-    const values = visibleLines.value.flatMap(line => line[mode.value].values).filter(v => v !== null)
+    const values = visibleLines.value.flatMap(valuesOf).filter(v => v !== null)
+    if (view.value === 'size') {
+        if (!values.length) return { min: 0, max: 1 }
+        const min = Math.max(Math.floor(Math.min(...values)), 0)
+        const qeaSizes = visibleLines.value.map(line => line[mode.value].qeaSize).filter(v => v !== null)
+        const cap = Math.max(SIZE_CAP, Math.ceil(Math.max(...qeaSizes, 0)) + SIZE_HEADROOM)
+        return { min, max: Math.max(Math.min(Math.ceil(Math.max(...values)), cap), min + 1) }
+    }
     if (!values.length) return { min: -1, max: 1 }
     const min = Math.max(Math.floor(Math.min(...values, 0)), Y_FLOOR)
     const max = Math.min(Math.ceil(Math.max(...values, 0)), Y_CAP)
@@ -267,13 +305,32 @@ const chartOptions = computed(() => {
     if (!data) return null
     const key = mode.value
 
+    // The size from which quantum wins on this line's hardware in that year.
+    function advantageText(line, year) {
+        const i = data.years.indexOf(year)
+        const size = i === -1 ? null : line[key].advantage[i]
+        const better = key === 'speed' ? 'faster' : 'cheaper'
+        return size === null ? `Quantum not ${better} at any size` : `Quantum ${better} from n = ${utils.toBase10HTML(size)}`
+    }
+
+    const sizeView = view.value === 'size'
     const series = visibleLines.value.map(line => {
         const style = lineStyles.value.get(line.index)
-        const { values, qea } = line[key]
+        const { qea, qeaSize } = line[key]
+        const values = valuesOf(line)
         const points = data.years.map((year, i) => ({ x: year, y: values[i] }))
+        // Tick where the hardware's roadmap ends.
+        const end = points.findIndex(p => p.x === line.roadmapEnd && p.y !== null)
+        if (end !== -1) {
+            points[end] = {
+                ...points[end],
+                marker: { enabled: true, symbol: 'roadmapEnd', radius: 4, fillColor: 'none', lineColor: style.color, lineWidth: 2 },
+            }
+        }
         // Mark the QEA year on the line: filled within the hardware's roadmap,
         // hollow when it rests on extrapolation (as projected roadmap points).
-        if (Number.isFinite(qea) && qea <= lastYear) {
+        const qeaY = sizeView ? qeaSize : 0
+        if (Number.isFinite(qea) && qea <= lastYear && qeaY !== null) {
             const marker = beyondRoadmap(line, qea)
                 ? { enabled: true, radius: 4, fillColor: '#ffffff', lineColor: style.color, lineWidth: 2, symbol: 'circle' }
                 : { enabled: true, radius: 5, fillColor: style.color, lineColor: '#ffffff', lineWidth: 2, symbol: 'circle' }
@@ -281,7 +338,7 @@ const chartOptions = computed(() => {
                 if (points[0].y !== null) points[0] = { ...points[0], marker, qea: true }
             } else {
                 const at = points.findIndex(p => p.x > qea)
-                points.splice(at === -1 ? points.length : at, 0, { x: qea, y: 0, marker, qea: true })
+                points.splice(at === -1 ? points.length : at, 0, { x: qea, y: qeaY, marker, qea: true })
             }
         }
         return {
@@ -291,9 +348,8 @@ const chartOptions = computed(() => {
             color: style.color,
             dashStyle: style.dashStyle,
             lineWidth: style.width,
-            // Faded up to the hardware's last roadmap year, bold after it.
             zoneAxis: 'x',
-            zones: line.roadmapEnd === null ? [] : [{ value: line.roadmapEnd, color: fadedColor(style.color) }, {}],
+            zones: qeaZones(qea, style.color),
             data: points,
             connectNulls: false,
             marker: { enabled: false, symbol: 'circle', states: { hover: { enabled: false } } },
@@ -336,7 +392,23 @@ const chartOptions = computed(() => {
             lineColor: '#e5e7eb',
             crosshair: { color: '#d1d5db', width: 1 },
         },
-        yAxis: {
+        yAxis: sizeView ? {
+            min: yRange.value.min,
+            max: yRange.value.max,
+            startOnTick: false,
+            endOnTick: false,
+            allowDecimals: false,
+            // The chart merges updates: clear what the ratio view sets.
+            tickInterval: null,
+            plotBands: [],
+            plotLines: [],
+            title: { text: 'Largest problem size it can run (n)', style: { color: MUTED } },
+            gridLineColor: GRID,
+            labels: {
+                useHTML: true,
+                formatter() { return utils.toBase10HTML(this.value) },
+            },
+        } : {
             min: yRange.value.min,
             max: yRange.value.max,
             startOnTick: false,
@@ -379,10 +451,12 @@ const chartOptions = computed(() => {
                         const line = data.lines[p.series.userOptions.lineIndex]
                         const algorithm = common === null ? `<div style="color:${MUTED};font-size:10px">${escapeHtml(algorithmLabel(data.candidates[line[key].algorithm]))}</div>` : ''
                         const extrapolated = beyondRoadmap(line, p.x) ? `<div style="color:${MUTED};font-size:10px">Beyond its roadmap (${line.roadmapEnd})</div>` : ''
+                        const advantage = sizeView ? `<div style="color:${MUTED};font-size:10px">${advantageText(line, p.x)}</div>` : ''
+                        const value = sizeView ? `n = ${utils.toBase10HTML(p.y)}` : `${utils.toBase10HTML(p.y)}×`
                         return `<div style="display:flex;align-items:flex-start;gap:6px;margin-top:2px">`
                             + `<span style="display:inline-block;width:14px;margin-top:7px;border-top:2px ${borderStyle(p.series.options.dashStyle)} ${p.series.color}"></span>`
                             + `<div style="flex:1"><div style="display:flex;justify-content:space-between;gap:12px"><span>${escapeHtml(p.series.name)}</span>`
-                            + `<span style="font-weight:600">${utils.toBase10HTML(p.y)}×</span></div>${extrapolated}${algorithm}</div></div>`
+                            + `<span style="font-weight:600">${value}</span></div>${advantage}${extrapolated}${algorithm}</div></div>`
                     }).join('')
                 const header = common !== null
                     ? `<div style="color:${MUTED};margin-bottom:4px">${escapeHtml(algorithmLabel(data.candidates[common]))} ${tex(data.candidates[common].tex)}</div>`
@@ -424,6 +498,7 @@ const tableRows = computed(() => {
             algorithm: algorithmLabel(candidate),
             complexity: candidate ? tex(candidate.tex) : '',
             qea: formatQea(entry.qea) + (Number.isFinite(entry.qea) && beyondRoadmap(line, entry.qea) ? ' (beyond roadmap)' : ''),
+            largest: line.sizes.at(-1) === null ? '–' : utils.toBase10HTML(line.sizes.at(-1)),
         }
     })
 })
@@ -433,10 +508,21 @@ const tableRows = computed(() => {
     <div class="py-2">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
             <div class="text-sm text-gray-700">
-                When each hardware reaches quantum economic advantage
+                {{ view === 'size' ? 'The largest problem each hardware can run' : 'When each hardware reaches quantum economic advantage' }}
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <span v-if="loading" class="text-xs text-gray-500">Calculating…</span>
+                <div class="inline-flex rounded-md border border-gray-200 overflow-hidden text-xs" role="group"
+                    aria-label="Graph">
+                    <button type="button" @click="view = 'size'" :aria-pressed="view === 'size'"
+                        :class="['px-3 py-1', view === 'size' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-100']">
+                        Problem size
+                    </button>
+                    <button type="button" @click="view = 'ratio'" :aria-pressed="view === 'ratio'"
+                        :class="['px-3 py-1 border-l border-gray-200', view === 'ratio' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-100']">
+                        Ratio to break-even
+                    </button>
+                </div>
                 <Popover v-if="result" class="relative">
                     <PopoverButton
                         class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600 hover:bg-gray-100">
@@ -478,10 +564,17 @@ const tableRows = computed(() => {
             </div>
         </div>
         <div v-if="result" class="pb-2 text-xs text-gray-500 space-y-0.5">
-            <div>
+            <div v-if="view === 'size'">
+                The largest problem each hardware can run with its qubits. Dots mark the year it reaches QEA (quantum
+                {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical).
+            </div>
+            <div v-else>
                 Above 1×, the hardware can run problems bigger than the smallest one where quantum is
                 {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical. Dots mark each hardware's QEA year.
-                Lines are faded until the hardware's roadmap ends and bold after it. A hollow dot is a QEA year past the roadmap.
+            </div>
+            <div>
+                Lines are faded before QEA and bold after it. A tick marks where each roadmap ends, and a hollow dot is a
+                QEA year past it.
             </div>
             <div>Quantum: <span v-html="quantumHtml"></span> · Classical: <span v-html="classicalHtml"></span></div>
         </div>
@@ -491,6 +584,9 @@ const tableRows = computed(() => {
         </div>
         <div v-else-if="result && !shownCount" class="py-10 text-center text-sm text-gray-500">
             No hardware selected. Pick some from the Hardware list above.
+        </div>
+        <div v-else-if="result && view === 'size'" class="py-10 text-center text-sm text-gray-500">
+            The problem sizes could not be calculated for the selected hardware.
         </div>
         <div v-else-if="result" class="py-10 text-center text-sm text-gray-500">
             Quantum is not {{ mode === 'speed' ? 'faster' : 'cheaper' }} than classical at any problem size on {{ hidden.size ? 'the selected' : 'any' }}
@@ -513,7 +609,8 @@ const tableRows = computed(() => {
                         <th class="py-1 pr-3 font-medium">Technology</th>
                         <th class="py-1 pr-3 font-medium">Algorithm</th>
                         <th class="py-1 pr-3 font-medium">Complexity</th>
-                        <th class="py-1 font-medium">{{ mode === 'speed' ? 'Speed' : 'Cost' }} QEA year</th>
+                        <th class="py-1 pr-3 font-medium">{{ mode === 'speed' ? 'Speed' : 'Cost' }} QEA year</th>
+                        <th class="py-1 font-medium">Largest problem in {{ lastYear }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -522,7 +619,8 @@ const tableRows = computed(() => {
                         <td class="py-1 pr-3">{{ row.technology }}</td>
                         <td class="py-1 pr-3">{{ row.algorithm }}</td>
                         <td class="py-1 pr-3" v-html="row.complexity"></td>
-                        <td class="py-1">{{ row.qea }}</td>
+                        <td class="py-1 pr-3">{{ row.qea }}</td>
+                        <td class="py-1" v-html="row.largest"></td>
                     </tr>
                 </tbody>
             </table>

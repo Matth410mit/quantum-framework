@@ -1,9 +1,10 @@
 /**
  * Hardware comparison over time: for one problem, one line per hardware
- * (presets and the user's own) showing how far its largest runnable problem is
- * past the smallest problem where quantum wins (the gap between the
- * feasibility line and the speed or cost advantage line of the QEA graph). The
- * line crosses 0 in the QEA year. Used by the Hardware Comparison page.
+ * (presets and the user's own). The page draws either the largest problem it
+ * can run (the QEA graph's feasibility line) or how far that is past the
+ * smallest problem where quantum wins (the gap between the feasibility line and
+ * the speed or cost advantage line), which crosses 0 in the QEA year. Used by
+ * the Hardware Comparison page.
  *
  * Modelling choices (kept here and in docs/hardware-comparison.md, not in the UI):
  * - Every line uses the same quantum algorithm. Unless the reader picks one,
@@ -244,7 +245,14 @@ function headroom(feasible, advantage) {
     return feasible - advantage;
 }
 
-// Headroom for every year, and the QEA years, for one algorithm on one hardware.
+// log10 n, or null when it isn't a size (Infinity: no size, NaN: can't be calculated).
+function finiteOrNull(value) {
+    return Number.isFinite(value) ? value : null;
+}
+
+// For one algorithm on one hardware: the largest runnable size every year
+// (sizes), and for speed and cost the headroom, the size from which quantum
+// wins (advantage), the QEA year and the largest runnable size then (qeaSize).
 function seriesFor(model, hardware, classical, quantum, years) {
     const variant = JSON.parse(JSON.stringify(model));
     applyHardwareToModel(variant, hardware);
@@ -256,20 +264,25 @@ function seriesFor(model, hardware, classical, quantum, years) {
     delete variant.qubitToProblemSize;
     try {
         const qea = quantumEconomicAdvantage(variant, { fast: true });
-        const speed = [], cost = [];
+        const sizes = [];
+        const speed = { values: [], advantage: [] }, cost = { values: [], advantage: [] };
         for (const year of years) {
             const feasible = qea.cappedFeasible(year);
-            speed.push(headroom(feasible, qea.quantumAdvantage(year)));
-            cost.push(headroom(feasible, qea.quantumCostAdvantage(year)));
+            sizes.push(finiteOrNull(feasible));
+            for (const [entry, advantage] of [[speed, qea.quantumAdvantage(year)], [cost, qea.quantumCostAdvantage(year)]]) {
+                entry.values.push(headroom(feasible, advantage));
+                entry.advantage.push(finiteOrNull(advantage));
+            }
         }
-        return {
-            speed: { values: speed, qea: asYear(qea.tStar) },
-            cost: { values: cost, qea: asYear(qea.tCostStar) },
-        };
+        for (const [entry, t] of [[speed, qea.tStar], [cost, qea.tCostStar]]) {
+            entry.qea = asYear(t);
+            entry.qeaSize = Number.isFinite(entry.qea) ? finiteOrNull(qea.cappedFeasible(entry.qea)) : null;
+        }
+        return { sizes, speed, cost };
     } catch (err) {
         console.warn('Hardware comparison failed for', hardware.hardwareName, quantum.name, err);
-        const empty = { values: years.map(() => null), qea: null };
-        return { speed: empty, cost: { ...empty } };
+        const empty = () => ({ values: years.map(() => null), advantage: years.map(() => null), qea: null, qeaSize: null });
+        return { sizes: years.map(() => null), speed: empty(), cost: empty() };
     }
 }
 
@@ -309,8 +322,11 @@ function lineOf(series, algorithm) {
     return {
         algorithm,
         values: series.values.map(v => (v === null || v === -Infinity ? null : v)),
+        // log10 n from which quantum wins, or null when it doesn't that year.
+        advantage: series.advantage,
         // Infinity: not before 3000. null: couldn't be calculated.
         qea: series.qea,
+        qeaSize: series.qeaSize,
     };
 }
 
@@ -319,9 +335,11 @@ function lineOf(series, algorithm) {
  * algorithm or no usable classical one. Every hardware uses the same quantum
  * algorithm.
  *   years: [year...] (twice a year, this year to YEARS_SHOWN years out)
- *   lines: [{ name, technology, basedOn, roadmapEnd, speed, cost }], one per hardware,
- *     where speed and cost are { algorithm (candidate index),
- *     values: [headroom | null], qea: year | Infinity | null }
+ *   lines: [{ name, technology, basedOn, roadmapEnd, sizes, speed, cost }], one per
+ *     hardware, where sizes is [log10 largest runnable n | null] and speed and
+ *     cost are { algorithm (candidate index), values: [headroom | null],
+ *     advantage: [log10 n | null], qea: year | Infinity | null,
+ *     qeaSize: log10 n | null }
  *   candidates: [{ key, name, authors, year, tex, custom }]
  *   recommendedKey: the recommended quantum algorithm's key (see recommendedOf)
  *   classical: { key, name, tex }
@@ -358,6 +376,7 @@ export function compareHardwareOverTime(model, problem, hardwares, { quantumKey 
         basedOn: hardware.basedOn || null,
         // The last roadmap year; later values are extrapolated.
         roadmapEnd: roadmapSpan(hardware.roadmap)?.[1] ?? null,
+        sizes: seriesByHardware[h][used].sizes,
         speed: lineOf(seriesByHardware[h][used].speed, used),
         cost: lineOf(seriesByHardware[h][used].cost, used),
     }));
