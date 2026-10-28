@@ -195,7 +195,7 @@ export function shareLink(models, hardwares = []) {
 //
 // state: { problemName (null: the calculator's first problem), quantumKey,
 //   classicalKey (null: automatic), mode ('speed' | 'cost'),
-//   view ('size' | 'ratio'), shown (hardware names drawn, or null for all of them) }
+//   shown (hardware names drawn, or null for all of them) }
 
 function encodeComparison(state, hardwares = []) {
     const shared = hardwares.filter(h => !PRESET_NAMES.has(h.hardwareName)
@@ -205,7 +205,6 @@ function encodeComparison(state, hardwares = []) {
         q: state.quantumKey || undefined,
         c: state.classicalKey || undefined,
         m: state.mode === 'cost' ? 'cost' : undefined,
-        v: state.view === 'ratio' ? 'ratio' : undefined,
         s: state.shown || undefined,
         hw: shared.length ? shared.map(h => ({ ...shareableHardware(h), hardwareName: h.hardwareName })) : undefined,
     }));
@@ -237,7 +236,6 @@ export function readComparisonFromUrl(adopt = null) {
         quantumKey: nonEmpty(entry.q),
         classicalKey: nonEmpty(entry.c),
         mode: entry.m === 'cost' ? 'cost' : 'speed',
-        view: entry.v === 'ratio' ? 'ratio' : 'size',
         shown: Array.isArray(entry.s)
             ? entry.s.filter(name => typeof name === 'string').map(name => renamed.get(name) || name)
             : null,
@@ -248,8 +246,7 @@ export function readComparisonFromUrl(adopt = null) {
 // browser. Choices left at their defaults leave the URL clean.
 export function writeComparisonToUrl(state) {
     const url = new URL(window.location.href);
-    const empty = !state.problemName && !state.quantumKey && !state.classicalKey && state.mode !== 'cost'
-        && state.view !== 'ratio' && !state.shown;
+    const empty = !state.problemName && !state.quantumKey && !state.classicalKey && state.mode !== 'cost' && !state.shown;
     if (empty) url.searchParams.delete(COMPARE_PARAM);
     else url.searchParams.set(COMPARE_PARAM, encodeComparison(state));
     if (url.href !== window.location.href) {

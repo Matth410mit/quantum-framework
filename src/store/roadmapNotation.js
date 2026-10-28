@@ -3,8 +3,8 @@
 // comparison:
 //   filled dot   demonstrated: a machine that exists
 //   hollow dot   projected: on the vendor's roadmap
-//   faded line   within the roadmap (between its first and last points)
-//   bold line    extrapolated outside the roadmap
+//   bold line    extrapolated past the roadmap's last point (the comparison
+//                bolds lines after the QEA year instead)
 //   grey band    the years past the roadmap (graphs of one hardware)
 // Dashes are left free: the hardware comparison uses them for vendors.
 // Colour says what is counted: physical qubits light red, logical qubits dark
@@ -12,19 +12,20 @@
 import * as utils from './utils'
 
 export const QUBIT_COLORS = { physical: '#E57373', logical: '#a32035' }
-export const LEGEND_LINE_COLOR = '#6b7280'
-const FADED_OPACITY = 0.35
 const BAND_COLOR = 'rgba(17, 24, 39, 0.04)'
 const BAND_TEXT = '#6b7280'
 
-// A line colour as drawn within the roadmap. Takes #rrggbb or rgb()/rgba().
-export function fadedColor(color, opacity = FADED_OPACITY) {
-    let rgb = null
-    const hex = /^#([0-9a-f]{6})$/i.exec(color || '')
-    if (hex) rgb = [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16))
-    const fn = /^rgba?\(([^)]+)\)$/i.exec(color || '')
-    if (fn) rgb = fn[1].split(',').slice(0, 3).map(Number)
-    return rgb ? `rgba(${rgb.join(', ')}, ${opacity})` : color
+// Classes of the bold part of a line. Highcharts zones can't change the line
+// width, so style.css sets it: BOLD for 2px lines, BOLD_THIN for 1px ones.
+export const BOLD = 'line-bold'
+export const BOLD_THIN = 'line-bold-thin'
+
+// Line zones (zoneAxis 'x') that make a line bold from x on: bold throughout
+// when x is at or before from, never when x is null or not finite.
+export function boldAfterZones(x, from = -Infinity, className = BOLD) {
+    if (x === null || x === undefined || !Number.isFinite(x)) return []
+    if (x <= from) return [{ className }]
+    return [{ value: x }, { className }]
 }
 
 export function qubitColor(unit) {
@@ -72,31 +73,16 @@ export function roadmapPointSeries(roadmap, dataPointTypes, color) {
     return [series('demonstrated', color), series('projected', '#ffffff')]
 }
 
-// A legend entry for the faded line (it has no points of its own).
-export function withinRoadmapLegendSeries() {
-    return {
-        name: 'Within roadmap',
-        type: 'line',
-        data: [],
-        color: fadedColor(LEGEND_LINE_COLOR, 0.5),
-        marker: { enabled: false },
-        enableMouseTracking: false,
-        events: { legendItemClick: () => false },
-    }
-}
-
 // First and last roadmap years, or null without points.
 export function roadmapSpan(roadmap) {
     const points = roadmapPoints(roadmap)
     return points.length ? [points[0][0], points.at(-1)[0]] : null
 }
 
-// Line zones (zoneAxis 'x'): faded from the first to the last roadmap year,
-// full colour outside. color: the line's colour.
-export function roadmapZones(roadmap, color) {
+// Line zones (zoneAxis 'x'): bold past the last roadmap year.
+export function roadmapZones(roadmap, className = BOLD) {
     const span = roadmapSpan(roadmap)
-    if (!span) return []
-    return [{ value: span[0] }, { value: span[1], color: fadedColor(color) }, {}]
+    return span ? boldAfterZones(span[1], -Infinity, className) : []
 }
 
 // x-axis plot bands shading the years outside the roadmap, on an axis that

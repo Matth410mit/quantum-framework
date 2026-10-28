@@ -15,3 +15,13 @@ body {
   font-family: Ubuntu, Helvetica, sans-serif;
   color: #333;
 }
+
+/* The bold part of a chart line (store/roadmapNotation.js). CSS wins over the
+   width Highcharts sets as an attribute. */
+.highcharts-graph.line-bold {
+  stroke-width: 3.5px;
+}
+
+.highcharts-graph.line-bold-thin {
+  stroke-width: 2px;
+}

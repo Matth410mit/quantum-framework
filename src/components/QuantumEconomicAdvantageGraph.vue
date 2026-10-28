@@ -7,10 +7,10 @@ highchartsMore(Highcharts);
 import { Chart } from 'highcharts-vue'
 import { ref, defineProps, watch } from 'vue';
 import * as utils from "../store/utils"
-import { roadmapZones, beyondRoadmapBands, yearTickInterval } from '../store/roadmapNotation'
+import { BOLD_THIN, roadmapZones, beyondRoadmapBands, yearTickInterval } from '../store/roadmapNotation'
 
-// Lines are solid. Roadmap-based lines are faded within the roadmap and bold
-// past it, where the background is shaded (store/roadmapNotation.js). Dashes
+// Lines are solid. Roadmap-based lines are bold past the roadmap, where the
+// background is shaded (store/roadmapNotation.js). Dashes
 // are left for the hardware comparison's vendors.
 const FEASIBILITY_COLOR = '#8b0000' // darkred
 const UNCAPPED_COLOR = '#008000'    // green
@@ -430,7 +430,7 @@ function updateGraph() {
             color: UNCAPPED_COLOR,
             lineWidth: 1,
             zoneAxis: 'x',
-            zones: roadmapZones(data.roadmap, UNCAPPED_COLOR),
+            zones: roadmapZones(data.roadmap, BOLD_THIN),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -464,7 +464,7 @@ function updateGraph() {
             })],
             color: FEASIBILITY_COLOR,
             zoneAxis: 'x',
-            zones: roadmapZones(data.roadmap, FEASIBILITY_COLOR),
+            zones: roadmapZones(data.roadmap),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -499,7 +499,7 @@ function updateGraph() {
             })],
             color: FEASIBILITY_COLOR,
             zoneAxis: 'x',
-            zones: roadmapZones(data.roadmap, FEASIBILITY_COLOR),
+            zones: roadmapZones(data.roadmap),
             marker: {
                 enabled: false,
                 symbol: 'circle'

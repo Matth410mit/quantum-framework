@@ -1,9 +1,9 @@
 # Hardware comparison page
 
 The "Hardware Comparison" page (top bar, `#hardware`) compares every hardware
-over time on one problem, in two graphs: the largest problem each hardware can
-run ("Problem size", the default) and how far that is past the smallest
-problem where quantum wins ("Ratio to break-even").
+over time on one problem, in two graphs: how far the largest problem each
+hardware can run is past the smallest problem where quantum wins, and under
+it the largest problem each hardware can run. The controls apply to both.
 
 - **Problem:** starts on the calculator's first problem and follows it until a
   problem is picked on this page.
@@ -20,17 +20,18 @@ problem where quantum wins ("Ratio to break-even").
 - **One line per hardware:** every preset and the user's own hardware (see
   below). Colour shows the technology (superconducting, trapped ion, neutral
   atom, semiconductor, other) and the dash pattern shows the vendor.
-- **y-axis, Problem size:** the largest problem the hardware can run that
-  year with its qubits and the chosen quantum algorithm (log scale). It's the
-  feasibility line of the QEA graph, one per hardware. It doesn't depend on
-  Speed / Cost or the classical algorithm; those move the QEA dots. The
-  tooltip also gives the size from which quantum wins that year.
-- **y-axis, Ratio to break-even:** the largest problem the hardware can run
-  that year, divided by the smallest problem where quantum beats classical
-  (log scale). It's the gap between the feasibility line and the advantage
-  line on the QEA graph, and crosses 1× in the QEA year.
-- **QEA:** a dot marks each hardware's QEA year, and the legend gives it.
-  Lines are faded before it and bold from it on (see Roadmap notation).
+- **First graph's y-axis:** the largest problem the hardware can run that
+  year, divided by the smallest problem where quantum beats classical (log
+  scale). It's the gap between the feasibility line and the advantage line on
+  the QEA graph, and crosses 1× in the QEA year.
+- **Second graph's y-axis:** the largest problem the hardware can run that
+  year with its qubits and the chosen quantum algorithm (log scale), with no
+  maximum compute time. It's the feasibility line of the QEA graph, one per
+  hardware. It doesn't depend on Speed / Cost or the classical algorithm;
+  those move the QEA dots. The tooltip also gives the size from which quantum
+  wins that year.
+- **QEA:** a dot marks each hardware's QEA year in both graphs, and the
+  legend gives it. Lines are bold from it on (see Roadmap notation).
 - **Table view:** hardware, algorithm, its complexity, the QEA year and the
   largest problem it can run in the last year.
 - **Links:** the choices are kept in the page address (`?compare=...`), so a
@@ -69,10 +70,9 @@ Advantage) and the comparison draw roadmaps the same way
 
 - **Filled dot:** demonstrated, a machine that exists.
 - **Hollow dot:** projected, on the vendor's roadmap.
-- **Faded line:** within the roadmap, from its first to its last point.
-- **Full-colour line:** extrapolated past the last roadmap point (or before
-  the first). On graphs of one hardware, the years past the roadmap also
-  have a grey "Beyond roadmap" background.
+- **Bold line:** extrapolated past the last roadmap point. The years past
+  the roadmap also have a grey "Beyond roadmap" background. Lines are not
+  faded anywhere.
 - **Colour:** physical qubits light red, logical qubits dark red.
 - **Labels:** counts as powers of ten (10^4), years as whole years.
 
@@ -82,21 +82,23 @@ dashed before the QEA year; they are solid now, and the shaded area shows
 where quantum wins. Its time-capped view draws the uncapped feasibility as
 a thin green line instead of a dashed one.
 
-The comparison uses the fading for QEA instead: each line is faded before
-its hardware's QEA year and bold from it on, and faded throughout when the
-hardware doesn't reach QEA in the period. A short vertical tick marks where
-the hardware's roadmap ends. A QEA year after that point is a hollow dot, is
-marked "beyond roadmap" in the table, and rests on the extrapolation.
+The comparison bolds lines from the QEA year instead: each line is bold from
+its hardware's QEA year on, and never when the hardware doesn't reach QEA in
+the period. The calculator's graphs keep the roadmap end, since the QEA graph
+has two QEA years (speed and cost). In the comparison, a QEA year past the
+hardware's roadmap is a hollow dot, is marked "beyond roadmap" in the table
+and the tooltip, and rests on the extrapolation. The bold width is set in
+`src/style.css`, because Highcharts zones can't change a line's width.
 
 A roadmap counted in logical qubits has no physical qubits line in Quantum
 Timelines. It used to draw its logical counts as a "Physical Qubits" line.
 
 ## Why these y-axes
 
-"Problem size" was asked for directly: it shows what each hardware can do,
-and the QEA dot shows when that becomes worth it. "Ratio to break-even" puts
-every hardware's QEA on one line (1×), so the QEA years can be compared at a
-glance. Two other options were considered:
+The first graph puts every hardware's QEA on one line (1×), so the QEA years
+can be compared at a glance. The second was asked for directly: it shows what
+each hardware can do, and the QEA dot shows when that becomes worth it. Two
+other options were considered for the first:
 
 - **The QEA graph's own speed and cost lines** (the problem size where quantum
   starts to win). On their own, they depend only on the hardware's slowdown
@@ -108,7 +110,7 @@ glance. Two other options were considered:
   run.** This grows far too fast to read on one axis. For Integer
   Factorization it reaches 10^39,663× on QuEra by 2041.
 
-The ratio y-axis is capped at 10^12×. The problem size y-axis goes to 10^12
+The first graph's y-axis is capped at 10^12×. The second graph's y-axis goes to 10^12
 or two orders of magnitude past the highest QEA dot, whichever is higher.
 Lines that go past the cap (e.g. Database Search, where n = 2^qubits and the
 largest size reaches 10^19,660,800) leave the top of the plot.

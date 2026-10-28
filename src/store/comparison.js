@@ -18,9 +18,6 @@ export const useComparisonStore = defineStore('comparison', () => {
     const quantumKey = ref(saved?.quantumKey || null)
     const classicalKey = ref(saved?.classicalKey || null)
     const mode = ref(saved?.mode || 'speed')
-    // 'size': the largest problem each hardware can run; 'ratio': that ÷ the
-    // smallest problem where quantum wins.
-    const view = ref(saved?.view || 'size')
     // Names of the hardware not drawn, so hardware added later starts ticked.
     const hidden = ref(saved?.shown ? names().filter(name => !saved.shown.includes(name)) : [])
 
@@ -70,19 +67,18 @@ export const useComparisonStore = defineStore('comparison', () => {
             quantumKey: quantumKey.value,
             classicalKey: classicalKey.value,
             mode: mode.value,
-            view: view.value,
             shown: shownNames(),
         }
     }
 
     // Also rewrites the URL read above, dropping the hardware it carried (now
     // saved in the browser).
-    watch(() => [problemChoice.value, quantumKey.value, classicalKey.value, mode.value, view.value, hidden.value, names()],
+    watch(() => [problemChoice.value, quantumKey.value, classicalKey.value, mode.value, hidden.value, names()],
         () => writeComparisonToUrl(state()), { immediate: true, deep: true })
 
     function link() {
         return comparisonLink(state(true), hardwares.all)
     }
 
-    return { problemName, quantumKey, classicalKey, mode, view, hidden, model, setProblem, link }
+    return { problemName, quantumKey, classicalKey, mode, hidden, model, setProblem, link }
 })
