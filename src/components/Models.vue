@@ -3,6 +3,7 @@ import MappingPreview from './MappingPreview.vue'
 import { re } from 'mathjs';
 import { watch, ref, defineAsyncComponent } from 'vue';
 import * as utils from "../store/utils"
+import { getQuantumAdvantage, convertQubits, quantumEconomicAdvantage } from "../store/qea"
 
 import * as math from 'mathjs';
 
@@ -24,83 +25,6 @@ import {
     DisclosurePanel,
 } from '@headlessui/vue'
 import { get } from '@vueuse/core';
-
-// returns log_10 of the problem size where qa is reached
-// processors only apply if the variable p is used in the classical function
-function getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate, processors, costImprovementRate, year) {
-    let adjustmentFactor = Number(hardwareSlowdown) + (year - currentYear) * Math.log10(quantumImprovementRate);
-
-    if (adjustmentFactor == null || isNaN(adjustmentFactor)) {
-        console.log("Adjustment factor is null or NaN");
-        console.log(`adjustment factor: ${adjustmentFactor}, hardwareSlowdown: ${hardwareSlowdown}, quantumImprovementRate: ${quantumImprovementRate}, year: ${year}`);
-        return 0;
-    }
-
-    adjustmentFactor = math.max(adjustmentFactor, 0);
-
-    // console.log("processors: ", processors);
-    let effectiveProcessors = processors + (year - currentYear) * Math.log10(costImprovementRate);
-    effectiveProcessors = math.max(effectiveProcessors, 0);
-
-    function evaluate(n) {
-        let scope = { n: n, p: Math.pow(10, effectiveProcessors) };
-        let value = logClassicalFunction(n, scope) - logQuantumFunction(n) - logPenaltyFunction(n) - adjustmentFactor;
-        return value;
-    }
-
-    let upperBound = 10 ** 100;
-    let lowerBound = 2;
-    let lastValue = evaluate(lowerBound);
-    while (lowerBound < 50 && lastValue >= 0) {
-        lowerBound += 0.25;
-        let nextValue = evaluate(lowerBound);
-
-        lastValue = nextValue;
-    }
-    let result = utils.bisectionMethod(evaluate, lowerBound, upperBound, "QA bisection");
-
-    if (result === null) {
-        console.log(`null returned!!!! year was ${year} and adjustmentFactor was ${adjustmentFactor}`);
-        console.log("lowerBound:", lowerBound, "upperBound:", upperBound);
-        console.log("f(lowerBound):", evaluate(lowerBound), "f(upperBound):", evaluate(upperBound));
-        return null;
-    }
-    else if (result == 0) {
-        return 0;
-    }
-    else if (result == Infinity) {
-        return Infinity;
-    }
-
-
-    // if (lowerBound > 2) {
-    //     console.log(`Final lowerBound guess was ${lowerBound}`);
-    // }
-
-    return Math.log10(result);
-}
-
-// converts expression with q (qubits) to expression with n (problem size)
-// by using the inverse of the mapping. Supports BOTH legacy "{q}" strings
-// and the new "q" strings.
-function convertQubits(model, expression) {
-    const kind = utils.classifyQubitMapping(model.qubitToProblemSize); // 'exp', 'doubleexp', 'linear', 'log', 'custom'
-    let replacement = "";
-
-    if (kind === 'exp') {   // n = 2^q   ->  q = log2(n)
-        replacement = "(log(n, 2))";
-    } else if (kind === 'log') { // n = log2(q)  ->  q = 2^n
-        replacement = "(2^n)";
-    } else if (kind === 'linear') { // n = q   ->  q = n
-        replacement = "n";
-    } else {
-        // Arbitrary mapping: don't attempt a symbolic inverse
-        return expression;
-    }
-
-    // Replace any occurrence of q (or {q}) in the math expression safely
-    return utils.replaceVariable(expression, "q", replacement);
-}
 
 
 function calculateCurrentAdvantage(model) {
@@ -241,78 +165,21 @@ function calculateCurrentAdvantage(model) {
 
 
 function calculateQuantumEconomicAdvantage(model) {
-    let hardwareSlowdown = model.hardwareSlowdown;
-    let physicalLogicalQubitsRatio = model.physicalLogicalQubitsRatio;
-    let ratioImprovementRate = utils.percentageToFraction(Number(model.ratioImprovementRate));
-    let quantumImprovementRate = utils.percentageToFraction(Number(model.quantumImprovementRate));
-    let qubitToProblemSize = model.qubitToProblemSize;
-    let roadmapUnit = model.roadmapUnit;
-
-    let classicalRuntimeInput = model.classicalRuntimeInput;
-    let quantumRuntimeInput = model.quantumRuntimeInput;
-    let penaltyInput = convertQubits(model, model.penaltyInput);
-
-
-    //lcf = logged classical function
-    let lcf = utils.createLoggedFunction(classicalRuntimeInput);
-    let lqf = utils.createLoggedFunction(quantumRuntimeInput);
-    let lpf = utils.createLoggedFunction(penaltyInput);
-
-    //lcfc = logged classical function cost
-    let lcfc = utils.createLoggedFunction(model.classicalWork);
-    let lqfc = utils.createLoggedFunction(convertQubits(model, model.quantumWork));
-
-
-    let costFactor = (Number(model.costFactor))
-    let costImprovementRate = utils.percentageToFraction(Number(model.costImprovementRate));
-
-    let processors = model.processors;
-
-    function qf(roadmap) {
-        return year => getQuantumFeasible(year, roadmap, physicalLogicalQubitsRatio, ratioImprovementRate, qubitToProblemSize, roadmapUnit)
-    }
-
-    function qa(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate) {
-        //should probably be refactored eventually
-        return year => getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate, processors, costImprovementRate, year)
-    }
-
-
-    let quantumFeasible = qf(model.roadmap);
-
-    // If a max compute time cap is set, build a capped feasibility function
-    let cappedFeasible = quantumFeasible;
-    const hasTimeCap = model.maxComputeTimeLog != null;
-    if (hasTimeCap) {
-        cappedFeasible = function(year) {
-            const qubitFeasible = quantumFeasible(year);
-
-            // Compute the year-adjusted hardware slowdown (same formula as getQuantumAdvantage)
-            let adjustedSlowdown = Number(hardwareSlowdown) + (year - currentYear) * Math.log10(quantumImprovementRate);
-            adjustedSlowdown = Math.max(adjustedSlowdown, 0);
-
-            // Find max problem size within the time budget for this year
-            const timeFeasible = utils.findTimeFeasibleProblemSize(lqf, lpf, model.maxComputeTimeLog, adjustedSlowdown);
-
-            return Math.min(qubitFeasible, timeFeasible);
-        };
-    }
-
-    let quantumAdvantage = qa(lcf, lqf, lpf, hardwareSlowdown, quantumImprovementRate);
-    let quantumCostAdvantage = qa(lcfc, lqfc, lpf, costFactor, costImprovementRate);
+    const {
+        tStar,
+        tCostStar,
+        quantumFeasible,
+        cappedFeasible,
+        hasTimeCap,
+        quantumAdvantage,
+        quantumCostAdvantage,
+        qubitsNeeded,
+        physicalLogicalQubitsRatio,
+        ratioImprovementRate,
+        roadmapUnit,
+    } = quantumEconomicAdvantage(model);
 
     let quantumEconomicAdvantageDataAux = {}
-
-    // Use capped feasibility for tStar/tCostStar so the QEA point reflects the time constraint
-    // Wrap inner functions to return finite values to prevent NaN/Infinity from breaking bisection
-    const tStar = utils.bisectionMethod(year => {
-        const val = cappedFeasible(year) - quantumAdvantage(year);
-        return Number.isFinite(val) ? val : -1;
-    }, currentYear, 3000, "tStar in QEA");
-    const tCostStar = utils.bisectionMethod(year => {
-        const val = cappedFeasible(year) - quantumCostAdvantage(year);
-        return Number.isFinite(val) ? val : -1;
-    }, currentYear, 3000, "tCostStar in QEA");
 
     console.log("printing stuff");
     console.log(cappedFeasible(currentYear), quantumAdvantage(currentYear));
@@ -532,6 +399,7 @@ function calculateQuantumEconomicAdvantage(model) {
     quantumEconomicAdvantageData.value = {
         ...quantumEconomicAdvantageDataAux,
         problemName: model.problemName,
+        roadmap: model.roadmap,
     }
 
     roadmapCharacteristicsData.value = {
@@ -539,99 +407,16 @@ function calculateQuantumEconomicAdvantage(model) {
         tCostStar: quantumEconomicAdvantageDataAux.tCostStar,
         tStar: quantumEconomicAdvantageDataAux.tStar,
         roadmap: model.roadmap,
+        dataPointTypes: model.dataPointTypes,
         extrapolationType: model.extrapolationType,
         physicalLogicalQubitsRatio: physicalLogicalQubitsRatio,
         ratioImprovementRate: ratioImprovementRate,
-        qubitToProblemSize: qubitToProblemSize,
+        qubitsNeeded: qubitsNeeded,
         quantumFeasible: quantumEconomicAdvantageDataAux.quantumFeasible,
     }
 }
 
 
-//returns the log_10 of the amount of logical qubits available with the given parameters
-function getLogicalQubits(year, roadmap, physicalLogicalQubitsRatio, ratioImprovementRate, roadmapUnit) {
-    const logOfPhysicalQubits = utils.getPhysicalQubits(year, roadmap, props.model.extrapolationType)
-    if (roadmapUnit === "logical") {
-        return logOfPhysicalQubits
-    }
-
-    //log_10 of the PLQR including the ratio improvement rate
-    let adjustedPLQR = Math.log10(physicalLogicalQubitsRatio) + (year - currentYear) * Math.log10(ratioImprovementRate);
-    const minimumPLQR = Math.log10(3); //minimum PLQR is 3
-    adjustedPLQR = Math.max(adjustedPLQR, minimumPLQR);
-
-    //logLogicalQubits has the log_10 of the number of logical qubits
-    let logLogicalQubits = logOfPhysicalQubits - adjustedPLQR
-
-    // Clamp: fewer than 1 logical qubit means nothing useful can be computed
-    if (!Number.isFinite(logLogicalQubits)) logLogicalQubits = 0;
-    logLogicalQubits = Math.max(logLogicalQubits, 0);
-
-    return logLogicalQubits
-}
-
-
-// returns the (base-10) log of the problem size solvable for a given year
-function getQuantumFeasible(
-    year,
-    roadmap,
-    physicalLogicalQubitsRatio,
-    ratioImprovementRate,
-    qubitToProblemSize,
-    roadmapUnit
-) {
-    // logLogicalQubits has the log_10 of the true number of logical qubits
-    let logLogicalQubits = getLogicalQubits(
-        year,
-        roadmap,
-        physicalLogicalQubitsRatio,
-        ratioImprovementRate,
-        roadmapUnit
-    )
-
-    // Classify the mapping (supports both old "{q}" and new "q" forms)
-    const kind = utils.classifyQubitMapping(qubitToProblemSize)
-
-    if (kind === 'exp') {
-        // n = 2^q  (return log10(n))
-        if (logLogicalQubits <= 0) return 0;
-        let problemSize = (logLogicalQubits + Math.log10(Math.log10(2)))
-        let result = 10 ** problemSize;
-        if (!Number.isFinite(result) || isNaN(result)) return 0;
-        return result;
-    }
-
-    if (kind === 'doubleexp') {
-        // n = 2^(2^q)
-        if (logLogicalQubits <= 0) return 0;
-        let problemSize = Math.pow(2, Math.pow(10, logLogicalQubits)) * Math.log10(2)
-        if (!Number.isFinite(problemSize) || isNaN(problemSize)) return 0;
-        return problemSize
-    }
-
-    if (kind === 'linear') {
-        // n = q
-        return logLogicalQubits
-    }
-
-    if (kind === 'log') {
-        // n = log2(q)
-        if (logLogicalQubits <= 0) return 0;
-        let problemSize = Math.log10(logLogicalQubits) - Math.log10(Math.log10(2))
-        if (!Number.isFinite(problemSize) || isNaN(problemSize)) return 0;
-        return Math.max(problemSize, 0);
-    }
-
-    // Custom expression n(q): evaluate numerically with the number of logical qubits
-    const logicalQubits = Math.pow(10, logLogicalQubits)
-    const mapped = utils.evaluateQubitMapping(qubitToProblemSize, logicalQubits, { clamp: 1e300 })
-
-    if (!mapped.ok) {
-        console.log("Custom qubit to problem mapping could not be evaluated:", mapped.error)
-        return 0
-    }
-    return mapped.value
-}
 
 
 const currentAdvantageData = ref({});
@@ -644,7 +429,13 @@ const showCostLines = ref(true);
 
 
 // watch problems and hardwareslowdown
+// Renaming hardware doesn't redraw the graphs, since they don't use the name.
+// Redrawing twice in one update breaks the charts.
+let lastInputs = null;
 watch(() => props.model, (model) => {
+    const inputs = JSON.stringify({ ...model, hardwareName: undefined });
+    if (inputs === lastInputs) return;
+    lastInputs = inputs;
     try {
         calculateCurrentAdvantage(props.model);
     } catch (err) {

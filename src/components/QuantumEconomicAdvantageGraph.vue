@@ -7,6 +7,13 @@ highchartsMore(Highcharts);
 import { Chart } from 'highcharts-vue'
 import { ref, defineProps, watch } from 'vue';
 import * as utils from "../store/utils"
+import { BOLD_THIN, roadmapZones, beyondRoadmapBands, yearTickInterval } from '../store/roadmapNotation'
+
+// Lines based on the roadmap turn bold after the roadmap ends, and that part
+// of the background is shaded. Dashed lines are only used on the hardware
+// comparison page.
+const FEASIBILITY_COLOR = '#8b0000'
+const UNCAPPED_COLOR = '#008000'
 
 const currentYear = new Date().getFullYear();
 
@@ -57,16 +64,20 @@ function processDataToGraph(data) {
     const midY = (nCostStar + nStar) / 2;
     const midX = (tStar + tCostStar) / 2;
 
-    const maxY = (midY === 0)
+    // If there is no advantage in range (for example, no known quantum
+    // speedup), size the axes to fit the data instead.
+    const maxY = (midY === 0 || !Number.isFinite(midY))
         ? Math.min(...[data.quantumAdvantage, data.quantumCostAdvantage, data.quantumFeasible]
             .filter(arr => Array.isArray(arr) && arr.length)
-            .map(arr => Math.max(...arr.map(step => step[1]))), 100)
+            .map(arr => Math.max(...arr.map(step => step[1])))
+            .filter(Number.isFinite), 100)
         : midY * 2;
 
-    const maxX = (midX === 0)
+    const maxX = (midX === 0 || !Number.isFinite(midX))
         ? Math.min(...[data.quantumAdvantage, data.quantumCostAdvantage, data.quantumFeasible]
             .filter(arr => Array.isArray(arr) && arr.length)
-            .map(arr => Math.max(...arr.map(step => step[0]))), new Date().getFullYear() + 5)
+            .map(arr => Math.max(...arr.map(step => step[0])))
+            .filter(Number.isFinite), new Date().getFullYear() + 5)
         : midX + (midX - currentYear);
 
     let quantumAdvantage = data.quantumAdvantage.filter(step => step[0] <= maxX && step[1] <= maxY);
@@ -111,6 +122,7 @@ function processDataToGraph(data) {
 
     return {
         graphTitle,
+        roadmap: data.roadmap,
         quantumAdvantage,
         quantumCostAdvantage,
         quantumFeasible,
@@ -265,13 +277,21 @@ function updateGraph() {
     const currentYear = new Date().getFullYear()
     const lastYear = data.maxX
     const mid = parseInt((data.maxX - currentYear) / 2) + currentYear
-    chartOptions.xAxis.tickPositions = [
-        currentYear,
-        (currentYear + mid) / 2,
-        mid,
-        (mid + lastYear) / 2,
-        lastYear
-    ]
+    // Use whole-year ticks when there is room, as in the roadmap charts.
+    if (lastYear - currentYear > 3) {
+        chartOptions.xAxis.tickPositions = undefined
+        chartOptions.xAxis.tickInterval = yearTickInterval(lastYear - currentYear)
+    } else {
+        chartOptions.xAxis.tickInterval = undefined
+        chartOptions.xAxis.tickPositions = [
+            currentYear,
+            (currentYear + mid) / 2,
+            mid,
+            (mid + lastYear) / 2,
+            lastYear
+        ]
+    }
+    chartOptions.xAxis.plotBands = beyondRoadmapBands(data.roadmap)
     chartOptions.xAxis.labels = {
         useHTML: true,
         formatter: function () {
@@ -381,7 +401,8 @@ function updateGraph() {
 
     // feasibility lines
     if (data.hasTimeCap && data.quantumFeasibleCapped) {
-        // When time cap is active: show uncapped as dashed green, capped as solid blue
+        // With a time cap, show the uncapped line as a thin green line and the
+        // capped one as the normal line.
         series.push({
             name: 'Max Qubits',
             data: [...data.quantumFeasible, ({
@@ -404,11 +425,13 @@ function updateGraph() {
                         return '<div style="text-align: center;">Max Qubits<br>(no time cap)</div>';
                     }
                 },
-                x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
-                y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
+                x: data.quantumFeasible.at(-1)?.[0],
+                y: data.quantumFeasible.at(-1)?.[1],
             })],
-            color: 'green',
-            dashStyle: 'dash',
+            color: UNCAPPED_COLOR,
+            lineWidth: 1,
+            zoneAxis: 'x',
+            zones: roadmapZones(data.roadmap, BOLD_THIN),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -437,17 +460,12 @@ function updateGraph() {
                         return '<div style="text-align: center;">Quantum<br>Feasibility<br>(time-capped)</div>';
                     }
                 },
-                x: data.quantumFeasibleCapped[data.quantumFeasibleCapped.length - 1][0],
-                y: data.quantumFeasibleCapped[data.quantumFeasibleCapped.length - 1][1],
+                x: data.quantumFeasibleCapped.at(-1)?.[0],
+                y: data.quantumFeasibleCapped.at(-1)?.[1],
             })],
-            color: 'darkred',
-            dashStyle: 'solid',
+            color: FEASIBILITY_COLOR,
             zoneAxis: 'x',
-            zones: [{
-                value: data.tStar,
-            }, {
-                dashStyle: 'solid'
-            }],
+            zones: roadmapZones(data.roadmap),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -477,17 +495,12 @@ function updateGraph() {
                         return '<div style="text-align: center;">Quantum<br>Feasibility</div>';
                     }
                 },
-                x: data.quantumFeasible[data.quantumFeasible.length - 1][0],
-                y: data.quantumFeasible[data.quantumFeasible.length - 1][1],
+                x: data.quantumFeasible.at(-1)?.[0],
+                y: data.quantumFeasible.at(-1)?.[1],
             })],
-            color: 'darkred',
-            dashStyle: 'dash',
+            color: FEASIBILITY_COLOR,
             zoneAxis: 'x',
-            zones: [{
-                value: data.tStar,
-            }, {
-                dashStyle: 'solid'
-            }],
+            zones: roadmapZones(data.roadmap),
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -519,17 +532,10 @@ function updateGraph() {
                         return '<div style="text-align: cnter;">Speed<br/>Advantage</div>';
                     }
                 },
-                x: data.quantumAdvantage[data.quantumAdvantage.length - 1][0],
-                y: data.quantumAdvantage[data.quantumAdvantage.length - 1][1],
+                x: data.quantumAdvantage.at(-1)?.[0],
+                y: data.quantumAdvantage.at(-1)?.[1],
             })],
             color: 'rgba(0,45,157,1)',
-            dashStyle: 'dash',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.tStar,
-            }, {
-                dashStyle: 'solid'
-            }],
             marker: {
                 enabled: false,
                 symbol: 'circle'
@@ -561,17 +567,10 @@ function updateGraph() {
                         return '<div style="text-align: cnter;">Cost<br/>Advantage</div>';
                     }
                 },
-                x: data.quantumCostAdvantage[data.quantumCostAdvantage.length - 1][0],
-                y: data.quantumCostAdvantage[data.quantumCostAdvantage.length - 1][1],
+                x: data.quantumCostAdvantage.at(-1)?.[0],
+                y: data.quantumCostAdvantage.at(-1)?.[1],
             })],
             color: 'rgba(48,158,244,1)',
-            dashStyle: 'dash',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.tCostStar,
-            }, {
-                dashStyle: 'solid'
-            }],
             marker: {
                 enabled: false,
                 symbol: 'circle'

@@ -26,3 +26,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Published roadmap JSON Schema (see docs/roadmap-format.md)
+!public/schemas/*.json
+
+# Last copy of the algorithm sheet, written by npm run sync
+.sheet-cache/
+.claude/

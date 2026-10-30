@@ -7,6 +7,16 @@
 
         <template #content>
             <div class="flex flex-col gap-4">
+                <div v-if="sizeParameter || hasRecommended" class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span v-if="sizeParameter" class="text-gray-600">{{ sizeParameter }}</span>
+                    <button v-if="hasRecommended && !usingRecommended" type="button"
+                        class="text-xs font-medium text-blue-900 hover:underline" @click="useRecommended">
+                        Reset to recommended
+                    </button>
+                </div>
+                <div v-if="noSpeedup" class="rounded-lg bg-gray-50 p-2 text-xs text-amber-900">
+                    No known quantum speedup: the best quantum algorithm in the sheet grows no slower than the best classical one.
+                </div>
                 <!-- Classical Algorithm Section -->
                 <div class="border rounded-lg p-4 bg-gray-50">
                     <h3 class="font-semibold text-md mb-3 text-gray-700">Classical Algorithm</h3>
@@ -18,20 +28,37 @@
                         </label>
                         <Multiselect id="classicalAlgorithmVariant" class="custom-multiselect mt-1" track-by="key"
                             label="name" v-model="localSelectedClassicalAlgorithm"
-                            :options="availableClassicalAlgorithms" :searchable="false" :close-on-select="true"
+                            :options="availableClassicalAlgorithms" :searchable="true" :close-on-select="true"
                             :allowEmpty="false" :show-labels="false" placeholder="Choose classical algorithm">
                             <template #option="{ option }">
-                                <div>
-                                    <div class="font-medium">{{ option.name }}</div>
-                                    <div class="text-xs text-gray-600">{{ option.description }}</div>
+                                <div :title="algorithmCredit(option)">
+                                    <div class="font-medium">
+                                        {{ option.name }}
+                                        <span v-if="option.year" class="font-normal opacity-70">({{ option.year }})</span>
+                                        <span v-if="option.recommended"
+                                            class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
+                                        <span v-if="option.approximate || option.approximation"
+                                            class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Approx.</span>
+                                        <span v-if="option.parallel"
+                                            class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Parallel</span>
+                                    </div>
+                                    <div class="text-xs opacity-70">{{ [option.variation, option.authorsLabel || option.description].filter(Boolean).join(' · ') }}</div>
                                 </div>
                             </template>
                             <template #singleLabel="{ option }">
-                                <div class="font-medium">{{ option.name }}</div>
+                                <div class="font-medium">
+                                    {{ option.name }}
+                                    <span v-if="option.year" class="font-normal text-gray-600">({{ option.year }})</span>
+                                    <span v-if="option.recommended"
+                                        class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
+                                </div>
                             </template>
                         </Multiselect>
-                        <p v-if="localSelectedClassicalAlgorithm" class="text-xs text-gray-600 mt-1">
-                            {{ localSelectedClassicalAlgorithm.description }}
+                        <p v-if="localSelectedClassicalAlgorithm && algorithmCredit(localSelectedClassicalAlgorithm)"
+                            class="text-xs text-gray-600 mt-1 whitespace-pre-line">
+                            <a v-if="localSelectedClassicalAlgorithm.url" :href="localSelectedClassicalAlgorithm.url" target="_blank"
+                                rel="noopener" class="text-blue-900 hover:underline">{{ algorithmCredit(localSelectedClassicalAlgorithm) }}</a>
+                            <template v-else>{{ algorithmCredit(localSelectedClassicalAlgorithm) }}</template>
                         </p>
                     </div>
 
@@ -73,20 +100,37 @@
                         </label>
                         <Multiselect id="quantumAlgorithmVariant" class="custom-multiselect mt-1" track-by="key"
                             label="name" v-model="localSelectedQuantumAlgorithm" :options="availableQuantumAlgorithms"
-                            :searchable="false" :close-on-select="true" :allowEmpty="false" :show-labels="false"
+                            :searchable="true" :close-on-select="true" :allowEmpty="false" :show-labels="false"
                             placeholder="Choose quantum algorithm">
                             <template #option="{ option }">
-                                <div>
-                                    <div class="font-medium">{{ option.name }}</div>
-                                    <div class="text-xs text-gray-600">{{ option.description }}</div>
+                                <div :title="algorithmCredit(option)">
+                                    <div class="font-medium">
+                                        {{ option.name }}
+                                        <span v-if="option.year" class="font-normal opacity-70">({{ option.year }})</span>
+                                        <span v-if="option.recommended"
+                                            class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
+                                        <span v-if="option.approximate || option.approximation"
+                                            class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Approx.</span>
+                                        <span v-if="option.parallel"
+                                            class="ml-1 rounded bg-gray-200 px-1 text-xs font-normal text-gray-700">Parallel</span>
+                                    </div>
+                                    <div class="text-xs opacity-70">{{ [option.variation, option.authorsLabel || option.description].filter(Boolean).join(' · ') }}</div>
                                 </div>
                             </template>
                             <template #singleLabel="{ option }">
-                                <div class="font-medium">{{ option.name }}</div>
+                                <div class="font-medium">
+                                    {{ option.name }}
+                                    <span v-if="option.year" class="font-normal text-gray-600">({{ option.year }})</span>
+                                    <span v-if="option.recommended"
+                                        class="ml-1 rounded bg-green-100 px-1 text-xs font-normal text-green-800">Recommended</span>
+                                </div>
                             </template>
                         </Multiselect>
-                        <p v-if="localSelectedQuantumAlgorithm" class="text-xs text-gray-600 mt-1">
-                            {{ localSelectedQuantumAlgorithm.description }}
+                        <p v-if="localSelectedQuantumAlgorithm && algorithmCredit(localSelectedQuantumAlgorithm)"
+                            class="text-xs text-gray-600 mt-1 whitespace-pre-line">
+                            <a v-if="localSelectedQuantumAlgorithm.url" :href="localSelectedQuantumAlgorithm.url" target="_blank"
+                                rel="noopener" class="text-blue-900 hover:underline">{{ algorithmCredit(localSelectedQuantumAlgorithm) }}</a>
+                            <template v-else>{{ algorithmCredit(localSelectedQuantumAlgorithm) }}</template>
                         </p>
                     </div>
 
@@ -185,6 +229,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import * as math from 'mathjs';
 import * as utils from '../store/utils';
+import { algorithmCredit } from '../store/problemCatalog';
 
 const emit = defineEmits(['updateFunctions', 'updateAlgorithmChange']);
 
@@ -218,6 +263,15 @@ const props = defineProps({
         type: Number,
         default: null,
     },
+    // True when the sheet shows no quantum speedup for the problem.
+    noSpeedup: {
+        type: Boolean,
+        default: false,
+    },
+    sizeParameter: {
+        type: String,
+        default: null,
+    },
 });
 
 const classicalRuntimeInput = ref(props.classicalRuntimeInput);
@@ -232,6 +286,30 @@ const maxComputeTimeLogValue = ref(props.maxComputeTimeLog !== null ? props.maxC
 // Local copies of selected algorithms for the modal UI
 const localSelectedClassicalAlgorithm = ref(props.selectedClassicalAlgorithm);
 const localSelectedQuantumAlgorithm = ref(props.selectedQuantumAlgorithm);
+
+// The recommended algorithm is listed first in each picker.
+const recommendedClassical = computed(() => props.availableClassicalAlgorithms.find(a => a.recommended) || null);
+const recommendedQuantum = computed(() => props.availableQuantumAlgorithms.find(a => a.recommended) || null);
+const hasRecommended = computed(() => !!(recommendedClassical.value || recommendedQuantum.value));
+const usingRecommended = computed(() =>
+    (!recommendedClassical.value || (classicalRuntimeInput.value === recommendedClassical.value.runtimeFormula
+        && classicalWork.value === recommendedClassical.value.workFormula))
+    && (!recommendedQuantum.value || (quantumRuntimeInput.value === recommendedQuantum.value.runtimeFormula
+        && quantumWork.value === recommendedQuantum.value.workFormula)));
+
+function useRecommended() {
+    if (recommendedClassical.value) {
+        localSelectedClassicalAlgorithm.value = recommendedClassical.value;
+        classicalRuntimeInput.value = recommendedClassical.value.runtimeFormula;
+        classicalWork.value = recommendedClassical.value.workFormula;
+    }
+    if (recommendedQuantum.value) {
+        localSelectedQuantumAlgorithm.value = recommendedQuantum.value;
+        quantumRuntimeInput.value = recommendedQuantum.value.runtimeFormula;
+        quantumWork.value = recommendedQuantum.value.workFormula;
+    }
+    validateAllInputs(false);
+}
 
 // Watch for prop changes
 watch(

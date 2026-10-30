@@ -1,32 +1,36 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { ref, toRaw, watch } from 'vue'
+import { useHardwaresStore } from './hardwares'
+import { readSetupFromUrl, writeSetupToUrl } from './urlState'
 
 const modelTemplate = {
     id: 1,
     problemName: "Integer Factorization",
-    classicalRuntimeInput: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3)) / p",
-    classicalWork: "e^((64/9 * n)^(1/3) * log(n, e)^(2/3))",
-    quantumRuntimeInput: "n^(2) * log(n, e)",
-    quantumWork: "n^(2) * log(n, e) * q",
+    // Same as the Integer Factorization defaults in problemCatalog.js.
+    classicalRuntimeInput: "e^((64/9 * n * log(2))^(1/3) * log(n * log(2))^(2/3)) / p",
+    classicalWork: "e^((64/9 * n * log(2))^(1/3) * log(n * log(2))^(2/3))",
+    quantumRuntimeInput: "n^2 * (500 + log(n, 2))",
+    quantumWork: "0.3 * n^3 + 0.0005 * n^3 * log(n, 2)",
     penaltyInput: "sqrt(q)",
-    qubitToProblemSize: "q",
-    hardwareName: 'IBM (Superconducting)',
+    // Logical qubits needed for a problem of size n.
+    qubitsNeeded: "3 * n + 0.002 * n * log(n, 2)",
+    // Same as the IBM 2025 (Superconducting) preset in hardwarePresets.js.
+    hardwareName: 'IBM 2025 (Superconducting)',
     roadmap: {
-        2020: 27,
-        // 2022: 127,
-        2024: 133,
+        2024: 156,
         2025: 156,
-        // 2029: 200,
-        // 2033: 2000,
-        2028: 1092,
-        // 2029: 22974,
-        // 2033: 100000
+        2026: 360,
+        2028: 1080,
+        2029: 10000,
+        2033: 100000,
     },
     dataPointTypes: {
-        2020: 'demonstrated',
         2024: 'demonstrated',
         2025: 'demonstrated',
+        2026: 'projected',
         2028: 'projected',
+        2029: 'projected',
+        2033: 'projected',
     },
     roadmapUnit: "physical",
     extrapolationType: 'exponential',
@@ -60,12 +64,13 @@ function deepClone(obj) {
 }
 
 export const useModelsStore = defineStore('models', () => {
+    const hardwares = useHardwaresStore()
+    // Load the models from a shared link if there is one. Otherwise start with one model.
     const models = ref(
-        [
-
-            deepClone(modelTemplate)
-        ]
+        readSetupFromUrl(modelTemplate, hardwares.all, hardwares.adoptShared) || [deepClone(modelTemplate)]
     )
+
+    watch(models, (value) => writeSetupToUrl(value, modelTemplate, hardwares.all), { deep: true })
 
     function addModel() {
         const model = deepClone(modelTemplate)

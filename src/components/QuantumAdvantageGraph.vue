@@ -295,8 +295,8 @@ function updateGraphData() {
                         return '<div style="text-align: cnter;">Classical<br/>Algorithm</div>';
                     }
                 },
-                x: data.classicalSteps[data.classicalSteps.length - 1][0],
-                y: data.classicalSteps[data.classicalSteps.length - 1][1],
+                x: data.classicalSteps.at(-1)?.[0],
+                y: data.classicalSteps.at(-1)?.[1],
             })],
             color: 'green',
             marker: {
@@ -327,8 +327,8 @@ function updateGraphData() {
                         return '<div style="text-align: cnter;">Quantum<br/>Algorithm<br/>Steps</div>';
                     }
                 },
-                x: data.quantumSteps[data.quantumSteps.length - 1][0],
-                y: data.quantumSteps[data.quantumSteps.length - 1][1],
+                x: data.quantumSteps.at(-1)?.[0],
+                y: data.quantumSteps.at(-1)?.[1],
             })],
             color: 'rgba(0,45,157,1)',
             marker: {
@@ -377,8 +377,8 @@ function updateGraphData() {
                         return '<div style="text-align: cnter;">Classical<br/>Algorithm<br/>Cost</div>';
                     }
                 },
-                x: data.classicalCostSteps[data.classicalCostSteps.length - 1][0],
-                y: data.classicalCostSteps[data.classicalCostSteps.length - 1][1],
+                x: data.classicalCostSteps.at(-1)?.[0],
+                y: data.classicalCostSteps.at(-1)?.[1],
             })],
             type: 'spline',
             style: {
@@ -414,8 +414,8 @@ function updateGraphData() {
                         return '<div style="text-align: cnter;">Quantum<br/>Algorithm<br/>Cost</div>';
                     }
                 },
-                x: data.quantumCostSteps[data.quantumCostSteps.length - 1][0],
-                y: data.quantumCostSteps[data.quantumCostSteps.length - 1][1],
+                x: data.quantumCostSteps.at(-1)?.[0],
+                y: data.quantumCostSteps.at(-1)?.[1],
             })],
             type: 'spline',
             style: {

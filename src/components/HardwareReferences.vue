@@ -26,12 +26,6 @@
 
 const references = [
     {
-        hardwareName: "IBM (Superconducting)",
-        year: 2024,
-        link: "https://www.ibm.com/roadmaps/quantum/2024/",
-
-    },
-    {
         hardwareName: "IBM 2025 (Superconducting)",
         year: 2025,
         link: "https://www.ibm.com/quantum/hardware#roadmap",
@@ -70,20 +64,15 @@ const references = [
     },
     {
         hardwareName: "Pasqal (Neutral Atom)",
-        link: "https://www.hpcwire.com/2024/03/13/pasqal-issues-roadmap-to-10000-qubits-in-2026-and-fault-tolerance-in-2028/",
-        year: 2024,
+        link: "https://www.pasqal.com/newsroom/pasqal-releases-2025-roadmap/",
+        year: 2025,
 
     },
     {
         hardwareName: "Infleqtion (Neutral Atom)",
-        link: "https://www.nextbigfuture.com/2024/02/infleqtion-1600-qubit-array-today-and-five-year-roadmap-to-fault-tolerant-quantum-computers.html",
-        year: 2024,
+        link: "https://thequantuminsider.com/2026/09/24/infleqtion-achieves-30-entangled-logical-qubits-on-its-sqale-quantum-computer/",
+        year: 2026,
 
     },
-    {
-        hardwareName: "Quantum Silicon (Semiconductors)",
-        link: "https://www.eetimes.eu/cea-leti-details-silicon-based-quantum-computing-roadmap/",
-        year: 2024,
-    }
 ]
 </script>

@@ -8,8 +8,13 @@ highchartsMore(Highcharts);
 import { Chart } from 'highcharts-vue'
 import { ref, defineProps, watch } from 'vue';
 import * as utils from "../store/utils"
+import {
+    QUBIT_COLORS, qubitColor, qubitUnitLabel, roadmapPointSeries, roadmapZones,
+    beyondRoadmapBands, yearTickInterval,
+} from '../store/roadmapNotation'
 
 const currentYear = new Date().getFullYear();
+const PROBLEM_SIZE_COLOR = '#8b0000'
 
 const props = defineProps({
     data: Object,
@@ -28,20 +33,21 @@ function processDataToGraph(data) {
     const maxX = Math.max(tCostStar, tStar) + 1
 
     let problemSize = data.quantumFeasible.filter(step => step[0] <= maxX)
-    const logicalQubits = problemSize.map(point => [point[0], utils.problemSizeToQubits(point[1], data.qubitToProblemSize)])
-    const physicalQubits = problemSize.map(point => [point[0], utils.getPhysicalQubits(point[0], data.roadmap, data.extrapolationType)])
+    const logQubitsNeeded = utils.createLogQubitsNeeded(data.qubitsNeeded)
+    const logicalQubits = problemSize.map(point => [point[0], Math.max(logQubitsNeeded(point[1]), 0)])
+    // A roadmap in logical qubits has no physical qubit counts.
+    const roadmapUnit = data.roadmapUnit === 'logical' ? 'logical' : 'physical'
+    const physicalQubits = roadmapUnit === 'physical'
+        ? problemSize.map(point => [point[0], utils.getPhysicalQubits(point[0], data.roadmap, data.extrapolationType)])
+        : []
 
-    const maxY = Math.max(...problemSize.map(point => point[1]), Math.max(...logicalQubits.map(point => point[1])), Math.max(...physicalQubits.map(point => point[1])))
-    
-    const roadmap = Object.entries(data.roadmap).map(entry => [Number(entry[0]), Math.log10(entry[1])])
-    
-    const lastRoadmapPoint = Object.keys(data.roadmap).at(-1);
-    
-    // console.log(maxX, maxY)
-    // console.log(roadmap)
-    // console.log(physicalQubits)
+    const maxY = Math.max(...problemSize.map(point => point[1]), ...logicalQubits.map(point => point[1]), ...physicalQubits.map(point => point[1]))
 
-    return { problemSize, logicalQubits, tStar, nStar, tCostStar, nCostStar, maxY, maxX, lastRoadmapPoint, physicalQubits, roadmap }
+
+    return {
+        problemSize, logicalQubits, tStar, nStar, tCostStar, nCostStar, maxY, maxX, physicalQubits,
+        roadmap: data.roadmap, dataPointTypes: data.dataPointTypes || {}, roadmapUnit,
+    }
 }
 
 let data = processDataToGraph(props.data)
@@ -58,7 +64,6 @@ const chartOptions = {
         },
 
         marginRight: 180,
-        marginBottom: 80,
     },
     credits: {
         enabled: false
@@ -141,16 +146,6 @@ const chartOptions = {
                     color: 'rgba(48,158,244,1)'
                 }
             }
-        }, {
-            value: data.lastRoadmapPoint,
-            color: '#6B7280',
-            width: 2,
-            label: {
-                text: 'Last Roadmap Data',
-                style: {
-                    color: '#6B7280'
-                }
-            }
         },
         ]
     },
@@ -223,13 +218,21 @@ function updateGraph() {
     const currentYear = new Date().getFullYear()
     const lastYear = data.maxX
     const mid = parseInt((data.maxX - currentYear) / 2) + currentYear
-    chartOptions.xAxis.tickPositions = [
-        currentYear,
-        (currentYear + mid) / 2,
-        mid,
-        (mid + lastYear) / 2,
-        lastYear
-    ]
+    // Use whole-year ticks when there is room, so roadmap points line up with
+    // their year.
+    if (lastYear - currentYear > 3) {
+        chartOptions.xAxis.tickPositions = undefined
+        chartOptions.xAxis.tickInterval = yearTickInterval(lastYear - currentYear)
+    } else {
+        chartOptions.xAxis.tickInterval = undefined
+        chartOptions.xAxis.tickPositions = [
+            currentYear,
+            (currentYear + mid) / 2,
+            mid,
+            (mid + lastYear) / 2,
+            lastYear
+        ]
+    }
     chartOptions.xAxis.labels = {
 
         useHTML: true,
@@ -270,171 +273,52 @@ function updateGraph() {
                 color: 'rgba(48,158,244,1)'
             }
         }
-    }, {
-        value: data.lastRoadmapPoint,
-        color: '#6B7280',
-        width: 2,
-        label: {
-            rotation: 0,
-            text: 'Last Roadmap<br> Data',
-            style: {
-                color: '#6B7280'
-            }
-        }
     },
     ]
+    // Shade the years after the last roadmap point.
+    chartOptions.xAxis.plotBands = beyondRoadmapBands(data.roadmap)
 
 
 
-    chartOptions.series = [
-    {
-            name: 'Logical Qubits',
-            data: [...data.logicalQubits, ({
-                dataLabels: {
-                    enabled: true,
-                    align: 'left',
-                    x: 3,
-                    verticalAlign: 'middle',
-                    overflow: false,
-                    crop: false,
-                    color: '#a32035',
-                    shadow: false,
-                    style: {
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        textOutline: 'none'
-                    },
-                    // breakline
-                    useHTML: true,
-                    formatter: function () {
-                        return '<div style="text-align: cnter;">Logical Qubits</div>';
-                    }
-
-                },
-                x: data.logicalQubits[data.logicalQubits.length - 1][0],
-                y: data.logicalQubits[data.logicalQubits.length - 1][1],
-
-            })],
-            color: '#a32035',
-            dashStyle: 'solid',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.lastRoadmapPoint,
-            }, {
-                dashStyle: 'dash'
-            }],
-            marker: {
-                enabled: false,
-                symbol: 'circle'
-            }
-        },
-        {
-            name: 'Physical Qubits',
-            data: [...data.physicalQubits, ({
-                dataLabels: {
-                    enabled: true,
-                    align: 'left',
-                    x: 3,
-                    verticalAlign: 'middle',
-                    overflow: false,
-                    crop: false,
-                    color: '#E57373',
-                    shadow: false,
-                    style: {
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        textOutline: 'none'
-                    },
-                    // breakline
-                    useHTML: true,
-                    formatter: function () {
-                        return '<div style="text-align: cnter;">Physical Qubits</div>';
-                    }
-
-                },
-                x: data.physicalQubits[data.physicalQubits.length - 1][0],
-                y: data.physicalQubits[data.physicalQubits.length - 1][1],
-
-            })],
-            color: '#E57373',
-            dashStyle: 'solid',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.lastRoadmapPoint,
-            }, {
-                dashStyle: 'dash'
-            }],
-            marker: {
-                enabled: false,
-                symbol: 'circle'
-            }
-        },
-        {
-            name: 'Problem Size',
-            data: [...data.problemSize, ({
-                dataLabels: {
-                    enabled: true,
-                    align: 'left',
-                    x: 3,
-                    verticalAlign: 'middle',
-                    overflow: false,
-                    crop: false,
-                    color: 'darkred',
-                    shadow: false,
-                    style: {
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        textOutline: 'none'
-                    },
-                    // breakline
-                    useHTML: true,
-                    formatter: function () {
-                        return '<div style="text-align: cnter;">Problem Size</div>';
-                    }
-
-                },
-                x: data.problemSize[data.problemSize.length - 1][0],
-                y: data.problemSize[data.problemSize.length - 1][1],
-
-            })],
-            color: 'darkred',
-            dashStyle: 'solid',
-            zoneAxis: 'x',
-            zones: [{
-                value: data.lastRoadmapPoint,
-            }, {
-                dashStyle: 'dash'
-            }],
-            marker: {
-                enabled: false,
-                symbol: 'circle'
-            }
-        },
-        
-
-        {
-            name: 'Roadmap',
-            data: data.roadmap,
-            color: '#E57373',
-            type: 'scatter',
-            maxPointWidth: 2,
+    // Label each series at the end of its line.
+    function withEndLabel(points, name, color) {
+        const last = points.at(-1)
+        if (!last) return points
+        return [...points, {
+            x: last[0],
+            y: last[1],
             dataLabels: {
                 enabled: true,
-                align: 'right',
-                useHTML: true,
-                formatter: function () {
-                    return `
-                    <p class="text-gray-700 mb-1 font-bold" style="color: ${this.series.color};">${utils.toBase10HTML(this.y)}</p>
-                    `
-                },
+                align: 'left',
+                x: 3,
+                verticalAlign: 'middle',
+                overflow: false,
+                crop: false,
+                color,
+                shadow: false,
+                style: { fontSize: '12px', fontWeight: 'bold', textOutline: 'none' },
+                formatter: () => name,
             },
-            marker: {
-                enabled: true,
-                symbol: 'circle'
-            },
-            showInLegend: false
+        }]
+    }
 
-        },
+    function lineSeries(name, points, color) {
+        return {
+            name,
+            data: withEndLabel(points, name, color),
+            color,
+            zoneAxis: 'x',
+            zones: roadmapZones(data.roadmap),
+            marker: { enabled: false, symbol: 'circle' },
+        }
+    }
+
+    chartOptions.series = [
+        lineSeries(qubitUnitLabel('logical'), data.logicalQubits, QUBIT_COLORS.logical),
+        ...(data.physicalQubits.length ? [lineSeries(qubitUnitLabel('physical'), data.physicalQubits, QUBIT_COLORS.physical)] : []),
+        lineSeries('Problem size', data.problemSize, PROBLEM_SIZE_COLOR),
+        // The roadmap's data points, drawn on the matching qubit line.
+        ...roadmapPointSeries(data.roadmap, data.dataPointTypes, qubitColor(data.roadmapUnit)),
     ]
     chartOptions.annotations = [
     ]

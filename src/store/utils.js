@@ -99,12 +99,12 @@ export function toBase10HTML(exponent) {
 
 export function applyLogRules(node) {
     if (node.isOperatorNode && node.op === '*') {
-        // log10(a * b) -> log10(a) + log10(b)
+        // log10(a * b) is log10(a) + log10(b)
         const transformedArgs = node.args.map(arg => applyLogRules(arg));
         return transformedArgs.reduce((acc, arg) => new math.OperatorNode('+', 'add', [acc, arg]));
     } 
     if (node.isOperatorNode && node.op === '/') {
-        // log10(a / b) -> log10(a) - log10(b)
+        // log10(a / b) is log10(a) - log10(b)
         if (node.args.length != 2) {
             console.log("error applying log to division")
             return
@@ -116,7 +116,7 @@ export function applyLogRules(node) {
         ])
     } 
     else if (node.isOperatorNode && node.op === '^') {
-        // log10(a^b) -> b * log10(a)
+        // log10(a^b) is b * log10(a)
         const [base, exponent] = node.args;
         return new math.OperatorNode('*', 'multiply', [
             exponent,
@@ -125,6 +125,27 @@ export function applyLogRules(node) {
     } 
     else if (node.isParenthesisNode) {
         return applyLogRules(node.content)
+    }
+    else if (node.isFunctionNode && node.fn.name === 'sqrt' && node.args.length === 1) {
+        // log10(sqrt(a)) is log10(a) / 2
+        return new math.OperatorNode('*', 'multiply', [new math.ConstantNode(0.5), applyLogRules(node.args[0])])
+    }
+    else if (node.isFunctionNode && ['log', 'log2', 'log10'].includes(node.fn.name) && node.args.length >= 1) {
+        // log10(log_b(a)) is log10(log10(a) / log10(b)). Working with log10(a)
+        // lets a be much larger than a normal number can hold.
+        const base = node.fn.name === 'log2' ? new math.ConstantNode(2)
+            : node.fn.name === 'log10' ? new math.ConstantNode(10)
+            : node.args[1] || new math.SymbolNode('e');
+        const ratio = new math.OperatorNode('/', 'divide', [
+            applyLogRules(node.args[0]),
+            new math.FunctionNode(new math.SymbolNode('log10'), [base]),
+        ]);
+        return new math.FunctionNode(new math.SymbolNode('log10'), [ratio])
+    }
+    else if (node.isOperatorNode && node.op === '+' && node.args.length === 2) {
+        // Compute log10(a + b) from log10(a) and log10(b) so that sums of huge
+        // numbers don't overflow.
+        return new math.FunctionNode(new math.SymbolNode("log10sum"), node.args.map(arg => applyLogRules(arg)))
     }
     else if (node.isOperatorNode || node.isFunctionNode || node.isSymbolNode || node.isConstantNode) {
         return new math.FunctionNode(new math.SymbolNode("log10"), [node])
@@ -145,14 +166,84 @@ export function createLoggedFunction(expression) {
     let loggedTree = applyLogRules(math.parse(expression)).compile();
     function logged(value, scope = {n: value}) {
         // let scope = {n: value};
-        return loggedTree.evaluate(scope);
+        return loggedTree.evaluate({ log10sum, ...scope });
     }
     return logged;
 }
 
+// log10(10^a + 10^b)
+function log10sum(a, b) {
+    if (a === -Infinity) return b;
+    if (b === -Infinity) return a;
+    const hi = Math.max(a, b), lo = Math.min(a, b);
+    return hi + Math.log10(1 + Math.pow(10, lo - hi));
+}
+
+// Like createLoggedFunction, but the argument is log10 of n.
 export function createConvertedFunction(expression) {
-    let replaced = expression.replaceAll("n", "(10^(n))");
+    // Only replaces the variable n, not the n in names like min() or ln().
+    let replaced = replaceVariable(expression, "n", "(10^(n))");
     return createLoggedFunction(replaced);
+}
+
+// Logical qubits needed for a problem of size n
+//
+// The calculator used to ask for the problem size that q qubits can hold, n(q).
+// It now asks for the qubits a problem of size n needs, Q(n), which is how
+// papers and the sheet give it.
+
+// Converts the old n(q) options to Q(n). Returns null for a custom n(q).
+export function legacyMappingToQubitsNeeded(mapping) {
+    switch (classifyQubitMapping(mapping)) {
+        case "linear": return "n";             // n = q
+        case "exp": return "log(n, 2)";        // n = 2^q
+        case "doubleexp": return "log(log(n, 2), 2)"; // n = 2^(2^q)
+        case "log": return "2^n";              // n = log2(q)
+        default: return null;
+    }
+}
+
+// The model's Q(n) formula. Older models fall back to the old mapping.
+export function modelQubitsNeeded(model) {
+    if (model?.qubitsNeeded) return model.qubitsNeeded;
+    return legacyMappingToQubitsNeeded(model?.qubitToProblemSize) || "n";
+}
+
+// Returns a function giving log10 of the qubits needed for a problem of size
+// 10^logSize. Each formula is compiled once and cached, since it's used for
+// many years.
+const logQubitsNeededCache = new Map();
+export function createLogQubitsNeeded(qubitsNeeded) {
+    const formula = qubitsNeeded || "n";
+    if (!logQubitsNeededCache.has(formula)) logQubitsNeededCache.set(formula, compileLogQubitsNeeded(formula));
+    return logQubitsNeededCache.get(formula);
+}
+
+function compileLogQubitsNeeded(qubitsNeeded) {
+    const f = createConvertedFunction(qubitsNeeded);
+    return logSize => {
+        const value = Number(f(logSize, { n: logSize }));
+        return typeof value === "number" ? value : NaN;
+    };
+}
+
+// log10 of the largest problem size that fits in 10^logQubits logical qubits.
+// Returns 0 if not even n = 1 fits.
+export function problemSizeForQubits(qubitsNeeded, logQubits) {
+    const logQ = createLogQubitsNeeded(qubitsNeeded);
+    const f = x => {
+        const v = logQ(x);
+        return Number.isNaN(v) ? Infinity : v - logQubits;
+    };
+    if (!(f(0) < 0)) return 0;
+    let lo = 0, hi = 300;
+    while (f(hi) <= 0 && hi < 1e7) { lo = hi; hi *= 4; }
+    if (f(hi) <= 0) return hi;
+    for (let i = 0; i < 100 && hi - lo > 1e-9; i++) {
+        const mid = (lo + hi) / 2;
+        if (f(mid) <= 0) lo = mid; else hi = mid;
+    }
+    return lo;
 }
 
 function simpleLinearRegression(x, y) {
@@ -388,7 +479,7 @@ export function findTimeFeasibleProblemSize(lqf, lpf, maxOpsLog, slowdownLog = 0
 }
 
 // returns the fractional representation of the percentage input
-// -20% -> 0.8, +30% -> 1.3
+// For example -20% becomes 0.8 and +30% becomes 1.3.
 export function percentageToFraction(percentage) {
     return 1 + percentage / 100;
 }
@@ -406,7 +497,7 @@ const BUILTIN_QUBIT_MAPPINGS = new Set([
 ]);
   
   
-// Turn a user expression like "{q}^3 + {q}*log({q})" (or "q^3 + q*log(q)") into f(q) -> number
+// Turns a user expression like "q^3 + q*log(q)" or "{q}^3 + {q}*log({q})" into a function of q.
 export function compileQubitMapping(expr) {
     const normalized = normalizeQubitMapping(String(expr || ""));
     const node = math.parse(normalized);

@@ -2,6 +2,9 @@
 // import Models from '../components/Models.vue';
 import { e } from 'mathjs';
 import { useModelsStore } from '../store/models';
+import { useHardwaresStore } from '../store/hardwares';
+import { useComparisonStore } from '../store/comparison';
+import { shareLink } from '../store/urlState';
 import { defineAsyncComponent, onMounted, ref } from 'vue';
 
 
@@ -9,17 +12,36 @@ import { defineAsyncComponent, onMounted, ref } from 'vue';
 const Models = defineAsyncComponent(() => import('../components/Models.vue'));
 const Documentation = defineAsyncComponent(() => import('../components/Documentation.vue'));
 const Team = defineAsyncComponent(() => import('../components/Team.vue'));
+const HardwareComparisonPage = defineAsyncComponent(() => import('../components/HardwareComparisonPage.vue'));
 
 const models = useModelsStore();
+const hardwares = useHardwaresStore();
+// Create the store here so a comparison link is read when the page loads.
+useComparisonStore();
+
+const linkCopied = ref(false);
+async function copyShareLink() {
+    const link = shareLink(models.models, hardwares.all);
+    try {
+        await navigator.clipboard.writeText(link);
+    } catch {
+        window.prompt('Copy this link to share the setup:', link);
+        return;
+    }
+    linkCopied.value = true;
+    setTimeout(() => { linkCopied.value = false; }, 2000);
+}
 const currentView = ref('index');
 const views = {
     index: 'index',
+    hardware: 'hardware',
     documentation: 'documentation',
     team: 'team'
 }
 
 const components = {
     index: Models,
+    hardware: HardwareComparisonPage,
     documentation: Documentation,
     team: Team
 }
@@ -55,8 +77,9 @@ onMounted(() => {
                     <img src="/FutureTech logo.png" class="h-10" alt="FutureTech">
                     <h1 class="text-[#1f2937] text-xl font-medium font-[Ubuntu,Helvetica,sans-serif] hidden sm:block">Quantum Economic Advantage Calculator</h1>
                 </a>
-                <div class="space-x-6 font-[Open_Sans,sans-serif]">
+                <div class="flex flex-wrap gap-x-6 gap-y-2 font-[Open_Sans,sans-serif]">
                     <a href="#" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Calculator</a>
+                    <a href="#hardware" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Hardware Comparison</a>
                     <a href="#documentation" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">How does it work?</a>
                     <a href="#team" class="text-[#1f2937] text-sm font-semibold hover:text-[#a32035] transition-colors duration-200">Team</a>
                 </div>
@@ -76,9 +99,12 @@ onMounted(() => {
                 <div v-for="(model, modelIndex) in models.models" :key="model.id">
                     <Models :model="model" />
                 </div>
-                <div class="mx-auto">
+                <div class="mx-auto flex items-center">
                     <button @click="models.addModel" class="bg-[#a32035] text-white rounded-lg p-2 m-4 hover:bg-[#8a1a2c] transition-colors duration-200">Add
                         Model</button>
+                    <button @click="copyShareLink" title="Copy a link that opens these problems, algorithms and hardware"
+                        class="rounded-lg p-2 m-4 ring-1 ring-[#a32035] text-[#a32035] hover:bg-red-50 transition-colors duration-200">
+                        {{ linkCopied ? 'Link copied' : 'Copy link to this setup' }}</button>
                 </div>
             </div>
         </div>
