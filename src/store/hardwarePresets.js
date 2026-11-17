@@ -12,8 +12,14 @@ function typesByYear(roadmap, demonstratedUpTo = currentYear) {
     return out;
 }
 
+// Superconducting: the framework paper's base case, 10^6 = speed ratio 10^4 x
+// 100 gates per logical gate (arXiv 2310.15505, Sec. III-C). The paper takes
+// IBM's 555 ns gate (about 2,800 cycles of a 5 GHz CPU) and rounds the ratio
+// up to 10^4, so Manual mode (gate time x GHz) gives less than 10^6. It used
+// to be a 12 ns gate (Google's 2019 Sycamore gate), 10^3.78. See
+// docs/model-decisions.md.
 const defaultAdvancedSlowdown = {
-    superconducting: { gateTime: 12, cpuGHz: 5, speed: 60, gateOverhead: 100, algorithmConstant: 1 },
+    superconducting: { gateTime: 555, cpuGHz: 5, speed: 10000, gateOverhead: 100, algorithmConstant: 1 },
     trappedIon: { gateTime: 600000, cpuGHz: 5, speed: 3000000, gateOverhead: 100, algorithmConstant: 1 },
     neutralAtom: { gateTime: 250, cpuGHz: 5, speed: 1250, gateOverhead: 100, algorithmConstant: 1 },
 };
@@ -52,7 +58,7 @@ export const PRESETS = [
         hardwareName: "IBM 2025 (Superconducting)",
         penaltyInput: "sqrt(q)",
         processors: 5,
-        hardwareSlowdown: 3.78,
+        hardwareSlowdown: 6,
         costFactor: 8,
         quantumImprovementRate: -10,
         costImprovementRate: -10,
@@ -70,7 +76,7 @@ export const PRESETS = [
         hardwareName: "Google (Superconducting)",
         penaltyInput: "sqrt(q)",
         processors: 5,
-        hardwareSlowdown: 3.78,
+        hardwareSlowdown: 6,
         costFactor: 8,
         quantumImprovementRate: -10,
         costImprovementRate: -10,
@@ -91,7 +97,7 @@ export const PRESETS = [
         hardwareName: "Rigetti (Superconducting)",
         penaltyInput: "sqrt(q)",
         processors: 5,
-        hardwareSlowdown: 3.78,
+        hardwareSlowdown: 6,
         costFactor: 8,
         quantumImprovementRate: -10,
         costImprovementRate: -10,
@@ -113,7 +119,7 @@ export const PRESETS = [
         hardwareName: "IQM (Superconducting)",
         penaltyInput: "sqrt(q)",
         processors: 5,
-        hardwareSlowdown: 3.78,
+        hardwareSlowdown: 6,
         costFactor: 8,
         quantumImprovementRate: -10,
         costImprovementRate: -10,

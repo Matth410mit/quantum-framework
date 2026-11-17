@@ -95,9 +95,10 @@ const rows = [
         </p>
         <p class="text-gray=900 text-justify my-4"> 
             By default, the tool estimates exponential growth for the roadmaps. When predicting the number of 
-            available qubits, the tool interpolates values between existing points exponentially and extrapolates 
-            beyond the final data points using the same growth rate. Users can also choose linear growth instead, 
-            in which case the tool interpolates and extrapolates linearly.
+            available qubits, the tool interpolates values between existing points exponentially. Beyond the final 
+            data point, every exponential roadmap grows by the same 1.6× a year, so that no single step in a 
+            vendor's roadmap sets its pace for decades. Users can also choose linear growth instead, in which case 
+            the tool interpolates linearly and continues the last step.
         </p>
         <p class="text-gray=900 text-justify my-4"> 
             These projections for physical qubits are ultimately used to estimate the number of logical qubits, 

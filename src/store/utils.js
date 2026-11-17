@@ -299,6 +299,13 @@ const interpolationFunctions = {
 // a map containing serialized strings of the inputs to the linear regression function mapped to their output regression
 const regressionMap = new Map();
 
+// Yearly growth of every exponential roadmap after its last point. Each
+// vendor's own last step varied from 1.15x to 4.6x a year and set its pace
+// for decades. 1.6x is the paper's IBM projection (10^5 qubits in 2033, 10^8
+// in 2049) and close to the largest machine's growth since 2016 (1.7x a year).
+// See docs/model-decisions.md.
+export const ROADMAP_GROWTH_PER_YEAR = 1.6;
+
 //returns log_10 of the number of qubits available based on inputs and saves the value to the regressionMap
 export function getPhysicalQubits(year, roadmap, extrapolationType, baseFactor = 1) {
   year = parseFloat(year);
@@ -324,15 +331,9 @@ export function getPhysicalQubits(year, roadmap, extrapolationType, baseFactor =
       numberOfPhysicalQubits = regression.slope * year + regression.intercept;
       logOfPhysicalQubits = Math.log10(numberOfPhysicalQubits);
     } else {
-      // exponential regression is just linear regression in log space
-      let [lastYears, lastQubitsLog] = [years.slice(-2), qubits.slice(-2).map(x => Math.log10(x))];
-      let key = JSON.stringify([lastYears, lastQubitsLog]);
-      let regression = regressionMap.has(key)
-        ? regressionMap.get(key)
-        : (regressionMap.set(key, simpleLinearRegression(lastYears, lastQubitsLog)), regressionMap.get(key));
-
-      logOfPhysicalQubits = regression.slope * year + regression.intercept;
-      // (You previously experimented with baseFactor; leaving it out here matches your working path.)
+      // exponential: the shared yearly growth from the last point on
+      let last = years.indexOf(Math.max(...years));
+      logOfPhysicalQubits = Math.log10(qubits[last]) + (year - years[last]) * Math.log10(ROADMAP_GROWTH_PER_YEAR);
     }
   } else {
     numberOfPhysicalQubits = interpolationFunctions[extrapolationType](years, qubits, year);

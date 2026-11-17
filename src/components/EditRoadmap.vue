@@ -22,8 +22,8 @@
                     <div class="w-full mb-4">
                         <p class="text-xs text-justify text-gray-600 ">Adjust the values within the roadmap or incorporate
                             additional data points as needed. Interpolation will be used to address any gaps between
-                            existing milestones on the roadmap. For projecting future trends and values beyond the current
-                            roadmap, regression analysis will be utilized.</p>
+                            existing milestones on the roadmap. Beyond the last point, exponential roadmaps grow 1.6× a
+                            year and linear ones continue their last step.</p>
                             
 
                     </div>

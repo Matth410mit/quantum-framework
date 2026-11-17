@@ -87,7 +87,8 @@ its hardware's QEA year on, and never when the hardware doesn't reach QEA in
 the period. The calculator's graphs keep the roadmap end, since the QEA graph
 has two QEA years (speed and cost). In the comparison, a QEA year past the
 hardware's roadmap is a hollow dot, is marked "beyond roadmap" in the table
-and the tooltip, and rests on the extrapolation. The bold width is set in
+and the tooltip, and rests on the extrapolation (every exponential roadmap
+grows 1.6x a year past its last point, see `docs/model-decisions.md`). The bold width is set in
 `src/style.css`, because Highcharts zones can't change a line's width.
 
 A roadmap counted in logical qubits has no physical qubits line in Quantum
