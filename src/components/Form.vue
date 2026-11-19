@@ -751,12 +751,12 @@ function onAlgorithmChange(type, algorithm) {
                     </p>
                     <div class="flex items-center justify-between w-full gap-2 mt-2 mb-4">
                         <input class="flex-1 accent-gray-800" type="range" id="hardwareSlowdown" min="0" max="16"
-                            step="0.5" v-model="model.hardwareSlowdown" />
+                            step="0.01" v-model="model.hardwareSlowdown" />
                         <div
                             class="bg-gray-100 p-2 rounded-lg text-center w-1/5 flex items-center justify-center relative">
                             <span class="pr-2">10 </span>
                             <input class="w-[6ch] bg-transparent  absolute t-0 l-0 ml-14 mb-4 text-xs" type="number"
-                                min="0" max="16" step="0.5" id="hardwareSlowdown" v-model="model.hardwareSlowdown" />
+                                min="0" max="16" step="0.01" id="hardwareSlowdown" v-model="model.hardwareSlowdown" />
                         </div>
                         <div
                             class="bg-gray-100 p-2 rounded-lg text-center w-1/3 flex  items-center justify-center relative">

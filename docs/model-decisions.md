@@ -3,6 +3,114 @@
 Modelling choices that change the calculator's answers, why they were made, and
 what to keep in mind if they are revisited. Newest first.
 
+## 9. Roadmaps: built machines plus targets up to 2028 (Nov 19, 2026)
+
+**Decision.** Every preset roadmap holds the machines the vendor has built plus
+its published targets up to 2028. Later targets are left out, and past the
+last point every roadmap grows 1.6x a year (decision 1). The same rule applies
+to every vendor. Hardware the user makes or imports keeps every point it is
+given.
+
+**Why.** Vendors have mostly met their one- and two-year targets and mostly
+missed longer ones. IBM shipped its 127, 433 and 1,121-qubit chips in the years
+its 2020 roadmap gave (2021 to 2023), but its 2022 promise of a 4,000-qubit
+chip in 2025 became a 120-qubit chip. Rigetti promised 128 qubits within a year
+in 2018 and delivered 108 in April 2026. Keeping every target ranked vendors by
+how bold their roadmap was: IQM led only because of its 1,000,000 qubits in
+2033, and IonQ's 2,000,000 in 2030 would have put it first by four years. Using
+built machines only would throw away near-term plans that usually happen.
+
+**Changes** (`src/store/hardwarePresets.js`, sources in its comments):
+
+| Hardware | Now | Left out |
+|---|---|---|
+| IBM 2025 | 156 (2024, 2025), 1,040 (2027) | 10,000 (2029), 100,000 (2033) |
+| IQM | 20 (2024) to 1,000 (2028) | 10,000 (2030), 1,000,000 (2033) |
+| Quantinuum | 56, 98, 192 (2027) | 1,000 (2029) |
+| IonQ | 25, 36, 100 (2025), 256, 10,000, 20,000 (2028) | 200,000 (2029), 2,000,000 (2030) |
+| Rigetti | adds 108 (2026) and 300 (2028) | about 1,000 (2029) |
+| QuEra | 256 (2022), 10,000 (2028) | |
+| Pasqal | 100 (2024), 1,000 (2027), 10,000 (2028) | |
+| Infleqtion | 80 (2026), 267 (2028) | 2,667 (2030) |
+| Google | unchanged (53, 105) | no dated targets |
+
+Other corrections found while checking: IonQ's points were algorithmic qubits
+(#AQ) entered as physical qubits; IBM skipped the 360 qubits planned for 2026
+and now plans two linked 520-qubit chips in 2027; QuEra's 3,000 (2025) and
+10,000 (2026) were not built and its June 2026 roadmap moves 10,000 to 2028;
+Pasqal's 1,000 for 2025 moved to early 2027. The starting model in
+`src/store/models.js` follows the IBM preset.
+
+**Effect.** With decision 7, factoring speed / cost QEA:
+
+| Hardware | Before | After |
+|---|---|---|
+| IBM 2025 | 2039.1 / 2038.0 | 2042.9 / 2041.9 |
+| Google | 2044.6 / 2043.5 | 2044.8 / 2043.7 |
+| Rigetti | 2045.1 / 2043.9 | 2046.6 / 2045.5 |
+| IQM | 2034.2 / 2033.1 | 2044.0 / 2042.9 |
+| IonQ | 2044.0 / 2043.0 | 2037.9 / 2036.9 |
+| Quantinuum | 2045.0 / 2044.0 | 2046.7 / 2045.8 |
+| QuEra | 2036.9 / 2035.9 | 2039.1 / 2038.0 |
+| Pasqal | 2039.3 / 2038.3 | 2039.5 / 2038.5 |
+| Infleqtion | 2044.1 / 2043.1 | 2047.2 / 2046.2 |
+
+Over the 9 presets and 21 problems, speed QEA by 2041 goes from 44 pairs to 35
+and cost QEA from 41 to 35.
+
+**Keep in mind.**
+
+- The cutoff is a fixed year in the data, not a rule in the code. When the
+  roadmaps are next updated, move it to two years past that date.
+- IonQ leads because of its 10,000 qubits in 2027, a 40x step in one year that
+  no trapped-ion system has come close to. It is a near-term target, so the
+  rule keeps it.
+- The backtest in decision 1 favours 1.45x over 1.6x. With the 2028 cutoff and
+  1.45x, every date moves 3 to 6 years later (IonQ 2040.5, IBM 2048.1). 1.6x
+  was kept to match the paper.
+
+## 8. Trapped-ion slowdown based on an error-correction round (Nov 19, 2026)
+
+**Decision.** IonQ and Quantinuum keep 10^8.48, now explained as one
+error-correction round of 60 ms per logical gate (3 x 10^8 cycles of a 5 GHz
+CPU) with no extra gate overhead, the same method as neutral atoms (decision
+5).
+
+**Before.** The same value from a 0.6 ms physical gate x 100 physical gates per
+logical gate.
+
+**Why.** Trapped-ion rounds take from a few ms (arXiv 2611.21906: "a few to
+tens of milliseconds") to about 200 ms (Quantinuum H1, arXiv 2107.07505: under
+200 ms per cycle; about 200 ms has been reported for Helios, though
+Quantinuum's paper gives no time). That is 10^7.2 to 10^9. 60 ms is inside the
+range; using 200 ms (10^9) would move IonQ and Quantinuum about 0.1 years.
+
+**Where.** `defaultAdvancedSlowdown.trappedIon` in
+`src/store/hardwarePresets.js` (`gateTime: 60000000`, `speed: 300000000`,
+`gateOverhead: 1`).
+
+## 7. Hardware slowdown no longer shrinks each year (Nov 19, 2026)
+
+**Decision.** Every preset and the starting model use a quantum improvement
+rate of 0%, so the slowdown stays the same every year. It is still an input
+("% change per year" next to the speed advantage slider).
+
+**Before.** -10% a year, which cut the slowdown about 5x over 15 years and fed
+into the computed cost factor (decision 6).
+
+**Why.** The calculator paper (arXiv 2508.21031) chose 10% as an "illustrative
+starting point"; the framework paper (arXiv 2310.15505) keeps the slowdown
+constant. A logical step is paced by error-correction cycles, and these have
+not been getting faster: Google's took 921 ns in 2023 and 1,100 ns in 2024, of
+which measurement and reset are about 70%. Physical gates did get
+faster (IBM's from about 555 ns to about 68 ns), but they are not the limit.
+
+**Effect.** On its own, most results move about 0.1 years later; problems with
+a small speedup move up to 5 years (Time Dependent Hartree-Fock, cost). The
+computed cost factor now falls only as logical qubits are added.
+
+**Keep in mind.** Hardware saved in the browser before this change keeps -10%.
+
 ## 6. Cost factor computed from the hardware; classical machine fixed (Nov 19, 2026)
 
 **Decision.** The cost factor is computed for each hardware and year unless the
@@ -41,7 +149,8 @@ Changing the yearly change also saves it, starting from this year's computed
 value. Reset goes back to the computed value and the preset's yearly change.
 
 **Values.** Computed cost factor in 2026 / 2033 / 2041: IBM 11.0 / 8.7 / 6.7,
-IonQ 13.5 / 12.1 / 10.1, QuEra 11.4 / 9.7 / 7.7.
+IonQ 13.5 / 12.1 / 10.1, QuEra 11.4 / 9.7 / 7.7. After decisions 7 and 9: IBM
+11.0 / 9.8 / 8.1, IonQ 13.5 / 11.2 / 9.5, QuEra 11.9 / 10.4 / 8.7.
 
 **Effect.** With decisions 3 to 5, factoring speed / cost QEA:
 
@@ -76,6 +185,13 @@ IonQ) no longer reach it.
   the same 10^5 for now; the others price per shot or per gate.
 - Hardware saved before this change keeps its typed cost factor (8) until
   Reset is pressed.
+- **The machine's price is flat as it grows** (checked Nov 19, kept for now).
+  IBM charged the same for 27 and 156 qubits, but a million-qubit machine will
+  likely cost more. The one large-machine figure is PsiQuantum's AUD 940
+  million (about US$620 million) Brisbane deal, about $4 a second over five
+  years, a few times today's $1.60. A price growing with physical qubits^0.2
+  (about 6x at a million qubits) would match it. That leaves most QEA years
+  unchanged and moves problems with a small speedup up to 4.5 years.
 
 ## 5. Neutral-atom hardware slowdown: 10^7.4 (Nov 19, 2026)
 
@@ -102,7 +218,7 @@ both give 7.4.
 more (QuEra, Time Dependent Hartree-Fock: about 5 years).
 
 **Keep in mind.** It rests on one experiment. Faster atom moves and readout
-would lower it; `quantumImprovementRate` already lowers it 10% a year.
+would lower it.
 
 The slowdown dialog's speed-ratio slider now moves in powers of ten (0 to 9),
 so the trapped-ion (3,000,000) and neutral-atom (25,000,000) ratios are
@@ -121,8 +237,9 @@ optimistic presets once everyone else moved to 1,000:1.
 
 **Where.** `src/store/hardwarePresets.js`.
 - Infleqtion: its logical targets converted at its 80:30, giving 80 (2026),
-  267 (2028) and 2,667 (2030) physical qubits.
+  267 (2028) and 2,667 (2030) physical qubits. Decision 9 left out 2030.
 - Pasqal: its roadmap's physical targets, 1,000 in 2025 and 10,000 in 2028.
+  Decision 9 added the 100 built in 2024 and moved the 1,000 to 2027.
 
 **Effect.** Factoring speed QEA moves from 2034.3 to 2039.3 for Pasqal and from
 2031.0 to 2044.1 for Infleqtion, together with decisions 3, 5 and 6.
@@ -217,9 +334,9 @@ polynomial ones at the bottom) are the ones that move.
   instead (Willow's 1.1 µs surface-code cycle) gives about 10^5 to 10^6. If the
   paper's number is later dropped, a gate-time estimate for 2025 hardware
   lands near 10^4.5 to 10^5.
-- **It still shrinks.** `quantumImprovementRate` (-10% a year) lowers the
-  slowdown every year from the current year, as before.
-- **The other modalities.** Trapped ions use 600,000 ns (10^8.48). Neutral
+- **It no longer shrinks.** `quantumImprovementRate` was -10% a year until
+  decision 7 set it to 0.
+- **The other modalities.** Trapped ions use 10^8.48 (decision 8). Neutral
   atoms used 250 ns (10^5.1) and looked better than they should; decision 5
   moved them to their error-correction round.
 - **Cost.** `costFactor` was not changed here. Decision 6 now computes it
@@ -292,8 +409,8 @@ with 1.3x, 56 with 1.45x and 65 with 2.0x.
 
 - One rate for every vendor and modality. A vendor whose own roadmap grows
   faster or slower is pulled to 1.6x after its last point.
-- The rate starts at each roadmap's last year, so a roadmap ending in 2028
-  gets more years at 1.6x than one ending in 2033.
+- The rate starts at each roadmap's last year. Since decision 9 every preset
+  ends by 2028, so they all switch to 1.6x at about the same time.
 - If qubit counts keep stalling, lower the rate (1.45x is the backtest's best
   rate that is still close to the paper).
 - Users can't change the rate in the calculator. Adding a point far in the

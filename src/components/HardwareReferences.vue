@@ -27,7 +27,7 @@
 const references = [
     {
         hardwareName: "IBM 2025 (Superconducting)",
-        year: 2025,
+        year: 2026,
         link: "https://www.ibm.com/quantum/hardware#roadmap",
     },
     {
@@ -42,19 +42,18 @@ const references = [
     },
     {
         hardwareName: "IonQ (Trapped Ion)",
-        year: 2024,
-        link: "https://ionq.com/posts/how-we-achieved-our-2024-performance-target-of-aq-35",
+        year: 2026,
+        link: "https://www.ionq.com/roadmap",
     },
     {
         hardwareName: "QuEra (Neutral Atom)",
-        year: 2024,
-        link: "https://www.quera.com/qec",
+        year: 2026,
+        link: "https://quantumcomputingreport.com/quera-updates-neutral-atom-quantum-roadmap-with-2028-fault-tolerant-launch-on-amazon-braket/",
     },
     {
         hardwareName: "Rigetti (Superconducting)",
-        year: 2024,
-        link: "https://www.globenewswire.com/news-release/2022/05/16/2444311/0/en/Rigetti-Computing-Reports-First-Quarter-2022-Financial-Results-and-Provides-Business-Update.html",
-        year: 2024,
+        year: 2026,
+        link: "https://thequantuminsider.com/2026/11/11/rigetti-q3-2026-results-quantum-computing-roadmap/",
     },
     {
         hardwareName: "Google (Superconducting)",

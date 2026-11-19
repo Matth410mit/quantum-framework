@@ -102,6 +102,11 @@ const rows = [
             the tool interpolates linearly and continues the last step.
         </p>
         <p class="text-gray=900 text-justify my-4"> 
+            The built-in roadmaps hold the machines each vendor has built plus its targets up to 2028. Vendors have 
+            mostly met their one- and two-year targets and mostly missed longer ones, so later targets are left out 
+            and every vendor is treated the same way.
+        </p>
+        <p class="text-gray=900 text-justify my-4"> 
             These projections for physical qubits are ultimately used to estimate the number of logical qubits, 
             which then feed into further calculations. Alternatively, users can bypass this step by directly 
             inputting a roadmap for logical qubits. In this case, the tool extrapolates the number of logical 
@@ -156,6 +161,11 @@ const rows = [
         <p class="text-gray=900 text-justify my-4"> 
             Users are also free to assume that quantum devices are becoming relatively slower over time, though 
             this represents a rather pessimistic outlook.
+        </p>
+        <p class="text-gray=900 text-justify my-4"> 
+            The built-in hardware uses a QIR of 0, so the slowdown stays the same every year. Error-correction 
+            cycles, which pace a logical operation, have not been getting faster: Google's took 921 ns in 2023 and 
+            1,100 ns in 2024. The original framework also keeps the slowdown constant.
         </p>
         
         <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Physical-Logical Qubit Ratio"> Physical-Logical Qubit Ratio </h4>
