@@ -205,7 +205,9 @@ const rows = [
         <p class="text-gray=900 text-justify my-4"> 
             The computed cost factor, described under Cost Inputs, does not use this rate. Its change over time 
             follows from the hardware: the slowdown falls with the quantum improvement rate, and each logical 
-            qubit's share of the machine's price falls as the roadmap adds qubits.
+            qubit's share of the machine's price falls as the roadmap adds qubits. Changing the rate in the 
+            calculator sets the cost factor, starting from this year's computed value, and Reset goes back to 
+            the computed value.
         </p>
 
         <h2 class="text-2xl font-bold text-[#1f2937]" id="Calculations">Calculations</h2>

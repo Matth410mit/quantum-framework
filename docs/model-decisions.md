@@ -35,10 +35,10 @@ machine and is still $1.60 a second ($96 a minute) in 2026 for 156 qubits.
 
 **Where.** `costFactorFunction` and `slowdownFunction` in `src/store/qea.js`.
 `costFactor: null` in the presets and the starting model means computed. The
-cost slider in `Form.vue` shows this year's computed value without saving it;
-moving the slider or typing a value saves it (an edit to the hardware), and
-"Use computed" goes back. The cost improvement rate box is disabled while the
-value is computed.
+cost slider in `Form.vue` shows this year's computed value without saving it.
+Moving the slider or typing a value saves it (an edit to the hardware).
+Changing the yearly change also saves it, starting from this year's computed
+value. Reset goes back to the computed value and the preset's yearly change.
 
 **Values.** Computed cost factor in 2026 / 2033 / 2041: IBM 11.0 / 8.7 / 6.7,
 IonQ 13.5 / 12.1 / 10.1, QuEra 11.4 / 9.7 / 7.7.
@@ -74,8 +74,8 @@ IonQ) no longer reach it.
   with the slowdown.
 - The price evidence is IBM's list price from 2022 to 2026. Every vendor uses
   the same 10^5 for now; the others price per shot or per gate.
-- Hardware saved before this change keeps its typed cost factor (8) and shows
-  "Use computed".
+- Hardware saved before this change keeps its typed cost factor (8) until
+  Reset is pressed.
 
 ## 5. Neutral-atom hardware slowdown: 10^7.4 (Nov 19, 2026)
 

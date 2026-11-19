@@ -202,27 +202,43 @@ watch(() => model.value, (value) => {
 const lockPLQR = computed(() => model.value.roadmapUnit !== "physical");
 
 // The cost factor is computed (null in the model) until the user moves the
-// slider or types a value. The inputs show this year's computed value without
-// saving it, since a saved value counts as an edit to the hardware.
+// slider, types a value or changes its yearly change. The inputs show this
+// year's computed value without saving it, since a saved value counts as an
+// edit to the hardware.
 const costFactorComputed = computed(() => isComputedCostFactor(model.value.costFactor));
 const computedCostFactorNow = computed(() => {
     const value = costFactorFunction({ ...model.value, costFactor: null })(currentYear);
     return Number.isFinite(value) ? utils.round(Math.max(value, 0), 1) : 0;
 });
+const isNumber = (value) => value !== '' && value != null && Number.isFinite(Number(value));
 const costFactorInput = computed({
     get: () => costFactorComputed.value ? computedCostFactorNow.value : model.value.costFactor,
     set: (value) => {
-        // Ignore an emptied box; "Use computed" is the way back.
-        if (value === '' || value == null || !Number.isFinite(Number(value))) return;
-        model.value.costFactor = Number(value);
+        // Ignore an emptied box; Reset is the way back.
+        if (isNumber(value)) model.value.costFactor = Number(value);
     },
 });
-function useComputedCostFactor() {
+// The yearly change only applies to a cost factor the user set, so changing it
+// sets one: this year's computed value, changing by the new rate from now on.
+const costImprovementRateInput = computed({
+    get: () => model.value.costImprovementRate,
+    set: (value) => {
+        if (!isNumber(value)) return;
+        if (costFactorComputed.value) model.value.costFactor = computedCostFactorNow.value;
+        model.value.costImprovementRate = Math.min(Math.max(Number(value), -90), 90);
+    },
+});
+// Back to the computed cost factor and the hardware's own yearly change (the
+// preset's, for an edited copy). Imported hardware keeps its rate.
+function resetCostFactor() {
+    const hardware = selectedHardware.value;
+    const preset = hardwaresStore.presets.find(p => p.hardwareName === (hardware?.basedOn || hardware?.hardwareName));
     model.value.costFactor = null;
+    if (preset) model.value.costImprovementRate = preset.costImprovementRate;
 }
 // An emptied box would stay blank while the old value is still used.
-function restoreCostFactorBox(event) {
-    if (event.target.value === '') event.target.value = costFactorInput.value;
+function restoreEmptyBox(event, value) {
+    if (event.target.value === '') event.target.value = value;
 }
 
 // Keep the ratio at or above MINIMUM_PLQR. Runs on change rather than on
@@ -757,13 +773,16 @@ function onAlgorithmChange(type, algorithm) {
                 <div class="flex flex-col">
                     <div class="flex items-center justify-between gap-2">
                         <label class="font-medium text-s" for="costFactor">Classical Compute Cost Advantage</label>
-                        <span v-if="costFactorComputed" class="text-xs text-gray-500">Computed</span>
-                        <button v-else type="button" class="text-xs text-blue-900 hover:underline"
-                            @click="useComputedCostFactor">Use computed</button>
+                        <button type="button"
+                            class="rounded-md bg-gray-500 text-xs p-0.5 px-2 text-white hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
+                            @click="resetCostFactor">
+                            Reset
+                        </button>
                     </div>
                     <p class="text-xs text-gray-600">
                         The cost of one quantum operation compared with one classical
-                        operation. Computed from the hardware for each year unless you set it.
+                        operation. Computed from the hardware for each year until you change it.
+                        Reset goes back to the computed value.
                     </p>
                     <div class="flex items-center justify-between w-full gap-2 mt-2 mb-4">
                         <input class="flex-1 accent-gray-800" type="range" id="costFactor" min="0" max="16" step="0.1"
@@ -773,13 +792,13 @@ function onAlgorithmChange(type, algorithm) {
                             <span class="pr-2">10 </span>
                             <input class="w-[6ch] bg-transparent  absolute t-0 l-0 ml-14 mb-4 text-xs" type="number"
                                 min="0" max="16" step="0.1" id="costFactor" v-model="costFactorInput"
-                                @blur="restoreCostFactorBox" />
+                                @blur="restoreEmptyBox($event, costFactorInput)" />
                         </div>
-                        <div :class="['bg-gray-100 p-2 rounded-lg text-center w-1/3 flex  items-center justify-center relative', costFactorComputed && 'opacity-50']"
-                            :title="costFactorComputed ? 'Applies to a cost factor you set' : ''">
+                        <div
+                            class="bg-gray-100 p-2 rounded-lg text-center w-1/3 flex  items-center justify-center relative">
                             <input class="w-[6ch] bg-transparent  text-center" type="number" min="-90" max="90" step="1"
-                                id="costImprovementRate" v-model="model.costImprovementRate" @input="checkLimits"
-                                :disabled="costFactorComputed" />
+                                id="costImprovementRate" v-model="costImprovementRateInput"
+                                @blur="restoreEmptyBox($event, costImprovementRateInput)" />
                             <span class="text-xs text-gray-600 text-left">
                                 % change per year
                             </span>
