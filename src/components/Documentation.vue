@@ -102,9 +102,11 @@ const rows = [
             the tool interpolates linearly and continues the last step.
         </p>
         <p class="text-gray=900 text-justify my-4"> 
-            The built-in roadmaps hold the machines each vendor has built plus its targets up to 2028. Vendors have 
-            mostly met their one- and two-year targets and mostly missed longer ones, so later targets are left out 
-            and every vendor is treated the same way.
+            The built-in roadmaps hold the machines each vendor has built, including the largest one running in 2026, 
+            plus its targets up to 2028. Vendors have mostly met their one- and two-year targets and mostly missed 
+            longer ones, so later targets are left out and every vendor is treated the same way. No step grows faster 
+            than 3.4× a year, about the fastest any vendor has grown its largest machine; a target above that is 
+            lowered to it.
         </p>
         <p class="text-gray=900 text-justify my-4"> 
             These projections for physical qubits are ultimately used to estimate the number of logical qubits, 

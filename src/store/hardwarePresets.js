@@ -37,80 +37,118 @@ const defaultAdvancedSlowdown = {
     neutralAtom: { gateTime: 5000000, cpuGHz: 5, speed: 25000000, gateOverhead: 1, algorithmConstant: 1 },
 };
 
-// Roadmaps hold the machines each vendor has built plus its targets up to
-// 2028. Vendors have mostly met their one- and two-year targets and mostly
-// missed longer ones, so later targets are left out (listed in the comments).
-// Past the last point every roadmap grows 1.6x a year (utils.js). See
-// docs/model-decisions.md.
+// Roadmaps hold the machines each vendor has built, the largest one running
+// in 2026 (the year these were checked), and its targets up to 2028. Vendors
+// have mostly met their one- and two-year targets and mostly missed longer
+// ones, so later targets are left out (listed in the comments). Past the last
+// point every roadmap grows 1.6x a year (utils.js). See docs/model-decisions.md.
+const BUILT_UP_TO = 2026;
 
-// Heron (156 qubits, 2024 and 2025), then two linked 520-qubit Nighthawk r3
-// chips in 2027 (IBM, Nov 2026; the 360 qubits planned for 2026 were
-// skipped). Left out: Starling (2029) and Blue Jay (2033).
-const ibm2025Roadmap = {
+// No step may grow faster than 3.4x a year, about the fastest any vendor has
+// grown its largest machine (IBM, 127 to 433 qubits in 2022; Atom Computing,
+// 100 to 1,180 from 2021 to 2023). A target above that is lowered to it,
+// counting from the point before.
+const MAX_GROWTH_PER_YEAR = 3.4;
+
+function capGrowth(roadmap) {
+    const out = {};
+    let previous = null;
+    for (const year of Object.keys(roadmap).map(Number).sort((a, b) => a - b)) {
+        let qubits = roadmap[year];
+        if (previous) {
+            const limit = Math.round(previous.qubits * MAX_GROWTH_PER_YEAR ** (year - previous.year));
+            qubits = Math.min(qubits, limit);
+        }
+        out[year] = qubits;
+        previous = { year, qubits };
+    }
+    return out;
+}
+
+// Heron (156 qubits) is still IBM's largest in 2026. Two linked 520-qubit
+// Nighthawk r3 chips (1,040) are planned for 2027, capped to 530. Left out:
+// Starling (2029) and Blue Jay (2033).
+const ibm2025Roadmap = capGrowth({
     2024: 156,
     2025: 156,
+    2026: 156,
     2027: 1040,
+});
+
+// Sycamore (2019) and Willow (2024). Google gives no dated qubit targets.
+const googleRoadmap = {
+    2019: 53,
+    2024: 105,
+    2026: 105,
 };
 
-// Left out: 10,000 (2030) and 1,000,000 (2033).
-const iqmRoadmap = {
+// Euro-Q-Exa (54 qubits, Feb 2026). Targets 300 (2027) and 1,000 (2028),
+// capped to 184 and 626. Left out: 10,000 (2030) and 1,000,000 (2033).
+const iqmRoadmap = capGrowth({
     2024: 20,
-    2026: 150,
+    2026: 54,
     2027: 300,
     2028: 1000,
-};
+});
 
 // H2 (56, 2024), Helios (98, 2025), Sol (192, 2027). Left out: Apollo (2029).
-const quantinuumRoadmap = {
+const quantinuumRoadmap = capGrowth({
     2024: 56,
     2025: 98,
+    2026: 98,
     2027: 192,
-};
+});
 
-// Aria (25, 2022), Forte (36, 2024), Tempo (100, 2025), then IonQ's roadmap.
-// Physical qubits; these points used to be algorithmic qubits (#AQ). Left
-// out: 200,000 (2029) and 2,000,000 (2030).
-const ionqRoadmap = {
+// Aria (25, 2022), Forte (36, 2024), Tempo (100, 2025, still the largest in
+// 2026; Superion 256 ships in 2027). Targets 10,000 (2027) and 20,000 (2028),
+// capped to 340 and 1,156. Physical qubits; these points used to be
+// algorithmic qubits (#AQ). Left out: 200,000 (2029) and 2,000,000 (2030).
+const ionqRoadmap = capGrowth({
     2022: 25,
     2024: 36,
     2025: 100,
-    2026: 256,
+    2026: 100,
     2027: 10000,
     2028: 20000,
-};
+});
 
 // Ankaa-3 (84, 2024), Cepheus-1-108Q (Apr 2026), 300+ by mid-2028. Left out:
 // about 1,000 "within three years" (Nov 2026).
-const rigettiRoadmap = {
+const rigettiRoadmap = capGrowth({
     2018: 19,
     2021: 40,
     2024: 84,
     2026: 108,
     2028: 300,
-};
+});
 
-// Aquila (256, 2022). The Jan 2024 roadmap's 3,000 (2025) and 10,000 (2026)
-// were not built; the June 2026 roadmap puts 10,000+ in Libra in 2028.
-const queraRoadmap = {
+// Aquila (256, 2022) and Gemini at AIST (260, 2025). The June 2026 roadmap
+// puts 10,000+ in Libra in 2028, capped to 3,006. The Jan 2024 roadmap's
+// 3,000 (2025) and 10,000 (2026) were not built.
+const queraRoadmap = capGrowth({
     2022: 256,
+    2025: 260,
+    2026: 260,
     2028: 10000,
-};
+});
 
-// Orion Beta (100+, 2024). The 1,000 planned for 2025 moved to early 2027;
-// Centaurus, about 10,000, in 2028. Its logical-qubit targets are not used.
-const pasqalRoadmap = {
+// Orion Beta (100+, 2024) and a 200-qubit system in Saudi Arabia (H1 2026).
+// Targets 1,000 (early 2027) and Centaurus, about 10,000 (2028), capped to
+// 680 and 2,312. Its logical-qubit targets are not used.
+const pasqalRoadmap = capGrowth({
     2024: 100,
+    2026: 200,
     2027: 1000,
     2028: 10000,
-};
+});
 
 // Infleqtion's targets are logical qubits: 30 shown in Sept 2026 (on 80
 // atoms) and 100 by 2028, converted at that 80:30, the only physical figure it
 // gives. Left out: 1,000 logical (2,667 physical) by 2030.
-const infleqtionRoadmap = {
+const infleqtionRoadmap = capGrowth({
     2026: 80,
     2028: 267,
-};
+});
 
 // provenance: who published the roadmap numbers (see roadmapSchema.js PROVENANCES).
 export const PRESETS = [
@@ -125,7 +163,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: ibm2025Roadmap,
-        dataPointTypes: typesByYear(ibm2025Roadmap, 2025),
+        dataPointTypes: typesByYear(ibm2025Roadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
@@ -142,15 +180,12 @@ export const PRESETS = [
         costImprovementRate: -10,
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
-        roadmap: {
-            2019: 53,
-            2024: 105,
-        },
-        dataPointTypes: typesByYear({ 2019: 53, 2024: 105 }),
+        roadmap: googleRoadmap,
+        dataPointTypes: typesByYear(googleRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
-        reference: "Sycamore (2019), and Willow (2024).",
+        reference: "Sycamore (2019) and Willow (2024).",
         provenance: "vendor-published",
     },
     {
@@ -164,7 +199,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: rigettiRoadmap,
-        dataPointTypes: typesByYear(rigettiRoadmap, 2026),
+        dataPointTypes: typesByYear(rigettiRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
@@ -182,7 +217,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: iqmRoadmap,
-        dataPointTypes: typesByYear(iqmRoadmap, 2024),
+        dataPointTypes: typesByYear(iqmRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.superconducting,
@@ -200,7 +235,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: ionqRoadmap,
-        dataPointTypes: typesByYear(ionqRoadmap, 2025),
+        dataPointTypes: typesByYear(ionqRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
@@ -218,7 +253,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: quantinuumRoadmap,
-        dataPointTypes: typesByYear(quantinuumRoadmap, 2025),
+        dataPointTypes: typesByYear(quantinuumRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.trappedIon,
@@ -236,7 +271,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: queraRoadmap,
-        dataPointTypes: typesByYear(queraRoadmap),
+        dataPointTypes: typesByYear(queraRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
@@ -254,7 +289,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: pasqalRoadmap,
-        dataPointTypes: typesByYear(pasqalRoadmap, 2024),
+        dataPointTypes: typesByYear(pasqalRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,
@@ -272,7 +307,7 @@ export const PRESETS = [
         physicalLogicalQubitsRatio: 1000,
         ratioImprovementRate: 0,
         roadmap: infleqtionRoadmap,
-        dataPointTypes: typesByYear(infleqtionRoadmap, 2026),
+        dataPointTypes: typesByYear(infleqtionRoadmap, BUILT_UP_TO),
         roadmapUnit: "physical",
         extrapolationType: "exponential",
         advancedSlowdown: defaultAdvancedSlowdown.neutralAtom,

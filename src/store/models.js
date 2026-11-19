@@ -16,14 +16,17 @@ const modelTemplate = {
     qubitsNeeded: "3 * n + 0.002 * n * log(n, 2)",
     // Same as the IBM 2025 (Superconducting) preset in hardwarePresets.js
     hardwareName: 'IBM 2025 (Superconducting)',
+    // The preset's 1,040 for 2027 after its growth cap (capGrowth).
     roadmap: {
         2024: 156,
         2025: 156,
-        2027: 1040,
+        2026: 156,
+        2027: 530,
     },
     dataPointTypes: {
         2024: 'demonstrated',
         2025: 'demonstrated',
+        2026: 'demonstrated',
         2027: 'projected',
     },
     roadmapUnit: "physical",

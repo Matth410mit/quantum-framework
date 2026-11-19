@@ -3,6 +3,76 @@
 Modelling choices that change the calculator's answers, why they were made, and
 what to keep in mind if they are revisited. Newest first.
 
+## 10. Roadmaps start from what is built today; growth capped at 3.4x a year (Nov 19, 2026)
+
+**Decision.** Every preset roadmap has a 2026 point with the largest machine
+the vendor has running now, and no step may grow faster than 3.4x a year. A
+target above that is lowered to it, counting from the point before
+(`capGrowth` and `MAX_GROWTH_PER_YEAR` in `src/store/hardwarePresets.js`). The
+vendors' own numbers stay in the data, so the cap is visible in one place.
+
+**Why the 2026 point.** Without it the calculator drew a line from the last
+built machine to the next target and treated the middle as built. QuEra went
+from 256 (2022) to 10,000 (2028), so the model gave it about 2,900 qubits in
+2026 against the 260 it has, and put it first. The same gap gave IBM 403
+instead of 156, Pasqal 464 instead of 200, IonQ 256 instead of 100 and IQM 150
+instead of 54.
+
+**Why 3.4x.** It is about the fastest any vendor has grown its largest machine
+(the list used in decision 1's backtest): IBM went from 127 to 433 qubits in
+2022, and Atom Computing from 100 to 1,180 between 2021 and 2023, 3.4x a year.
+No vendor with 100 or more qubits has grown faster. IonQ's 10,000 for 2027
+would have been 100x in a year.
+
+**Built today** (largest machine running in 2026): IBM 156 (Heron), Google 105
+(Willow), Rigetti 108, IQM 54 (Euro-Q-Exa, Feb 2026), IonQ 100 (Tempo;
+Superion 256 ships in 2027), Quantinuum 98 (Helios), QuEra 260 (Gemini at
+AIST), Pasqal 200 (Saudi Arabia, H1 2026), Infleqtion 80.
+
+**Capped targets:**
+
+| Hardware | Vendor target | Capped |
+|---|---|---|
+| IBM 2025 | 1,040 (2027) | 530 |
+| IQM | 300 (2027), 1,000 (2028) | 184, 626 |
+| IonQ | 10,000 (2027), 20,000 (2028) | 340, 1,156 |
+| QuEra | 10,000 (2028) | 3,006 |
+| Pasqal | 1,000 (2027), 10,000 (2028) | 680, 2,312 |
+
+Rigetti, Quantinuum, Infleqtion and Google are under the cap.
+
+**Effect.** Factoring speed / cost QEA, before (decision 9) and after:
+
+| Hardware | Before | After |
+|---|---|---|
+| QuEra | 2039.1 / 2038.0 | 2041.6 / 2040.6 |
+| Pasqal | 2039.5 / 2038.5 | 2042.6 / 2041.6 |
+| IonQ | 2037.9 / 2036.9 | 2043.9 / 2042.9 |
+| IBM 2025 | 2042.9 / 2041.9 | 2044.4 / 2043.3 |
+| IQM | 2044.0 / 2042.9 | 2045.0 / 2043.9 |
+| Rigetti | 2046.6 / 2045.5 | 2046.6 / 2045.5 |
+| Quantinuum | 2046.7 / 2045.8 | 2046.7 / 2045.8 |
+| Google | 2044.8 / 2043.7 | 2046.8 / 2045.7 |
+| Infleqtion | 2047.2 / 2046.2 | 2047.2 / 2046.2 |
+
+Speed QEA by 2041 goes from 35 pairs to 31 and cost QEA from 35 to 32.
+Neutral atoms lead, which fits: they run the largest arrays (QuEra has run
+3,000 atoms in the lab), and the lead is about a year.
+
+**Keep in mind.**
+
+- The built-today counts come from announcements and were checked in Nov 2026.
+  IQM expected a 150-qubit system by the end of 2026. When the roadmaps are
+  next updated, move `BUILT_UP_TO` and the today points to that year.
+- The graphs show the capped numbers, not the vendors' own. The comments in
+  `hardwarePresets.js` and the table above list both.
+- Google moves about two years later because it has shown nothing larger
+  than Willow since 2024.
+- The cap applies only to the presets. Hardware the user makes or imports
+  keeps every point it is given.
+- The starting model in `src/store/models.js` holds the capped IBM roadmap and
+  must match the preset.
+
 ## 9. Roadmaps: built machines plus targets up to 2028 (Nov 19, 2026)
 
 **Decision.** Every preset roadmap holds the machines the vendor has built plus
@@ -20,7 +90,8 @@ how bold their roadmap was: IQM led only because of its 1,000,000 qubits in
 2033, and IonQ's 2,000,000 in 2030 would have put it first by four years. Using
 built machines only would throw away near-term plans that usually happen.
 
-**Changes** (`src/store/hardwarePresets.js`, sources in its comments):
+**Changes** (`src/store/hardwarePresets.js`, sources in its comments; decision
+10 later added a 2026 point and capped the fastest steps):
 
 | Hardware | Now | Left out |
 |---|---|---|
@@ -62,9 +133,9 @@ and cost QEA from 41 to 35.
 
 - The cutoff is a fixed year in the data, not a rule in the code. When the
   roadmaps are next updated, move it to two years past that date.
-- IonQ leads because of its 10,000 qubits in 2027, a 40x step in one year that
-  no trapped-ion system has come close to. It is a near-term target, so the
-  rule keeps it.
+- IonQ led because of its 10,000 qubits in 2027, a 40x step in one year.
+  Decision 10 caps such steps at 3.4x a year and adds what each vendor has
+  built today.
 - The backtest in decision 1 favours 1.45x over 1.6x. With the 2028 cutoff and
   1.45x, every date moves 3 to 6 years later (IonQ 2040.5, IBM 2048.1). 1.6x
   was kept to match the paper.
