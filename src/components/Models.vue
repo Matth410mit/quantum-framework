@@ -3,7 +3,7 @@ import MappingPreview from './MappingPreview.vue'
 import { re } from 'mathjs';
 import { watch, ref, defineAsyncComponent } from 'vue';
 import * as utils from "../store/utils"
-import { getQuantumAdvantage, convertQubits, quantumEconomicAdvantage } from "../store/qea"
+import { getQuantumAdvantage, convertQubits, quantumEconomicAdvantage, slowdownFunction, costFactorFunction } from "../store/qea"
 
 import * as math from 'mathjs';
 
@@ -28,16 +28,15 @@ import { get } from '@vueuse/core';
 
 
 function calculateCurrentAdvantage(model) {
-    let hardwareSlowdown = Number(model.hardwareSlowdown);
-    let quantumImprovementRate = utils.percentageToFraction(Number(model.quantumImprovementRate));
-    let costFactor = Number(model.costFactor)
-    let costImprovementRate = utils.percentageToFraction(Number(model.costImprovementRate));
+    let hardwareSlowdown = slowdownFunction(model)(currentYear);
+    // This year's cost factor: computed from the hardware, or the user's own value.
+    let costFactor = Math.max(costFactorFunction(model)(currentYear), 0);
     let classicalRuntimeInput = model.classicalRuntimeInput;
     let quantumRuntimeInput = model.quantumRuntimeInput;
 
     let penaltyInput = convertQubits(model, model.penaltyInput);
 
-    let processors = model.processors;
+    let processors = Number(model.processors);
 
     //lcf = logged classical function
     let lcf = utils.createLoggedFunction(classicalRuntimeInput);
@@ -58,8 +57,8 @@ function calculateCurrentAdvantage(model) {
     let ccfc = utils.createConvertedFunction(model.classicalWork);
     let cqfc = utils.createConvertedFunction(quantumWork);
 
-    let advantage = getQuantumAdvantage(lcf, lqf, lpf, hardwareSlowdown, quantumImprovementRate, processors, costImprovementRate, currentYear);
-    let costAdvantage = getQuantumAdvantage(lcfc, lqfc, lpf, costFactor, costImprovementRate, processors, costImprovementRate, currentYear); //should be refactored to avoid using same parameter twice
+    let advantage = getQuantumAdvantage(lcf, lqf, lpf, hardwareSlowdown, processors);
+    let costAdvantage = getQuantumAdvantage(lcfc, lqfc, lpf, costFactor, processors);
 
     // range from 0 to double of the advantage with 200 ticks
     let range = []

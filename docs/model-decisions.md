@@ -3,20 +3,172 @@
 Modelling choices that change the calculator's answers, why they were made, and
 what to keep in mind if they are revisited. Newest first.
 
-## 3. Physical-to-logical qubit ratio (open)
+## 6. Cost factor computed from the hardware; classical machine fixed (Nov 19, 2026)
 
-Not decided yet. The question: should the ratio of physical to logical qubits
-start near 1,000 and stay there, as in the framework paper (arXiv 2310.15505,
-"no systematic changes over time"), or start lower and shrink every year, as
-the presets do now (IBM 264 and IQM, IonQ, Quantinuum and QuEra 100 or less,
-shrinking 23% a year down to the floor of 3)?
+**Decision.** The cost factor is computed for each hardware and year unless the
+user sets one with the slider. In log10:
 
-Under today's presets most hardware reaches the floor of 3 by 2041, which no
-error-correction scheme published so far supports (IBM's gross code is 288
-physical for 12 logical, 24:1; surface codes are several hundred to 1,000+).
-Recommendation: 1,000, fixed. With it, factoring QEA moves to IBM 2037.3,
-IQM 2033.2, IonQ 2036.9, Quantinuum 2038.1 and QuEra 2030.0 (before decisions
-1 and 2 below).
+    cf(t) = hws(t) + p - log10 L(t)
+
+`hws(t)` is the hardware slowdown that year, `p` the processors setting and
+`L(t)` the logical qubits available that year (at least 1). One logical step
+costs the whole machine's price for that step, and its logical qubits share it.
+The machine's price is `p`: it costs as much as 10^p classical cores. A value
+the user sets works as before, changing by the cost improvement rate each year.
+
+The comparably priced classical machine (10^p processors) is now the same size
+every year. The cost improvement rate used to shrink it too, by 10% a year, in
+both the speed and cost comparisons.
+
+**Before.** 10^8 for every preset, falling 10% a year. It had no source. It
+started as 1,000 in June 2024, became 10^8 in July 2024 when the input moved to
+powers of ten, and was kept when the cost comparison moved from machine steps
+to logical-qubit steps in Nov 2024.
+
+**Why.** IBM's list price was $1.60 a second in April 2022 for a 27-qubit
+machine and is still $1.60 a second ($96 a minute) in 2026 for 156 qubits.
+- The machine's price hasn't moved, so the classical machine priced like it
+  shouldn't shrink. $1.60 a second buys about 130,000 cloud vCPUs at $0.0446
+  per vCPU-hour (AWS c7i), which matches the default of 10^5.
+- The price per qubit fell about 30% a year as machines grew, which the
+  formula follows through `L(t)`. A fixed 10% a year did not.
+
+**Where.** `costFactorFunction` and `slowdownFunction` in `src/store/qea.js`.
+`costFactor: null` in the presets and the starting model means computed. The
+cost slider in `Form.vue` shows this year's computed value without saving it;
+moving the slider or typing a value saves it (an edit to the hardware), and
+"Use computed" goes back. The cost improvement rate box is disabled while the
+value is computed.
+
+**Values.** Computed cost factor in 2026 / 2033 / 2041: IBM 11.0 / 8.7 / 6.7,
+IonQ 13.5 / 12.1 / 10.1, QuEra 11.4 / 9.7 / 7.7.
+
+**Effect.** With decisions 3 to 5, factoring speed / cost QEA:
+
+| Hardware | Before | After |
+|---|---|---|
+| IBM 2025 | 2032.6 / 2032.1 | 2039.1 / 2038.0 |
+| Google | 2041.1 / 2040.3 | 2044.6 / 2043.5 |
+| Rigetti | 2041.4 / 2040.7 | 2045.1 / 2043.9 |
+| IQM | 2031.0 / 2030.7 | 2034.2 / 2033.1 |
+| IonQ | 2032.9 / 2031.7 | 2044.0 / 2042.9 |
+| Quantinuum | 2033.5 / 2032.4 | 2045.0 / 2044.0 |
+| QuEra | 2029.5 / 2028.9 | 2036.9 / 2035.9 |
+| Pasqal | 2034.3 / 2033.6 | 2039.3 / 2038.3 |
+| Infleqtion | 2031.0 / 2030.2 | 2044.1 / 2043.1 |
+
+Over the 9 presets and 21 problems with recommended algorithms, speed QEA by
+2041 goes from 58 pairs to 44 and cost QEA from 52 to 41. Speed QEA before 3000
+goes from 117 to 105: with the classical machine no longer shrinking, problems
+with a small speedup (Nearest Neighbor Search on superconducting, Sorting on
+IonQ) no longer reach it.
+
+**Keep in mind.**
+
+- Speed and cost QEA now land close together for most problems. When quantum
+  work is runtime x qubits, a problem that fills the machine costs the
+  machine's price for its runtime, just like the classical machine. They differ
+  where the work formulas differ (Time Dependent Hartree-Fock: cost much later).
+- A machine with fewer logical qubits than 1 counts as 1, so until the roadmap
+  passes 1,000 physical qubits (IBM: about 2028) the cost factor falls only
+  with the slowdown.
+- The price evidence is IBM's list price from 2022 to 2026. Every vendor uses
+  the same 10^5 for now; the others price per shot or per gate.
+- Hardware saved before this change keeps its typed cost factor (8) and shows
+  "Use computed".
+
+## 5. Neutral-atom hardware slowdown: 10^7.4 (Nov 19, 2026)
+
+**Decision.** QuEra, Pasqal and Infleqtion use 10^7.4 instead of 10^5.1.
+
+**Why.** An error-corrected computer is paced by its correction rounds, not a
+single laser pulse. Harvard and QuEra's 2025 experiment (arXiv 2506.20661)
+measured 4.45 ms per round and 0.655 ms per transversal CNOT. A logical gate is
+about one round plus one CNOT, 5 ms, which is 2.5 x 10^7 cycles of a 5 GHz CPU.
+Transversal gates need about one round each, so there is no extra gate
+overhead. The authors estimate their logical steps are 10 to 20 times slower
+than a superconducting chip's, which gives 10^7.0 to 10^7.3 next to 10^6, so
+the two estimates agree.
+
+**Before.** A 250 ns gate times 100 gates of overhead, 10^5.1, which made
+neutral atoms look faster than superconducting hardware.
+
+**Where.** `hardwareSlowdown: 7.4` and `defaultAdvancedSlowdown.neutralAtom`
+(`gateTime: 5000000`, `speed: 25000000`, `gateOverhead: 1`) in
+`src/store/hardwarePresets.js`. Simple and Manual mode in the slowdown dialog
+both give 7.4.
+
+**Effect.** Factoring moves about 0.6 years. Problems with a small speedup move
+more (QuEra, Time Dependent Hartree-Fock: about 5 years).
+
+**Keep in mind.** It rests on one experiment. Faster atom moves and readout
+would lower it; `quantumImprovementRate` already lowers it 10% a year.
+
+The slowdown dialog's speed-ratio slider now moves in powers of ten (0 to 9),
+so the trapped-ion (3,000,000) and neutral-atom (25,000,000) ratios are
+reachable. The box still holds the exact ratio and the saved format is
+unchanged.
+
+## 4. Pasqal and Infleqtion counted in physical qubits (Nov 19, 2026)
+
+**Decision.** Both roadmaps are now physical-qubit roadmaps and get the same
+ratio as everyone else.
+
+**Why.** Their published "logical qubits" use very small codes. Infleqtion's 30
+logical qubits used 80 atoms, under 3 each, too few to correct errors through a
+long algorithm. Counting them as logical qubits made these two the most
+optimistic presets once everyone else moved to 1,000:1.
+
+**Where.** `src/store/hardwarePresets.js`.
+- Infleqtion: its logical targets converted at its 80:30, giving 80 (2026),
+  267 (2028) and 2,667 (2030) physical qubits.
+- Pasqal: its roadmap's physical targets, 1,000 in 2025 and 10,000 in 2028.
+
+**Effect.** Factoring speed QEA moves from 2034.3 to 2039.3 for Pasqal and from
+2031.0 to 2044.1 for Infleqtion, together with decisions 3, 5 and 6.
+
+**Keep in mind.** Infleqtion's only physical figure is that one demo; if it
+moves to stronger codes it will need more atoms per logical qubit, so the 2028
+and 2030 counts are estimates. Pasqal's roadmap contradicts itself (140 qubits
+in 2025 and "200+" in 2027 elsewhere). Users can still switch either roadmap
+back to logical qubits.
+
+## 3. Physical-to-logical qubit ratio: 1,000, fixed (Nov 19, 2026)
+
+**Decision.** Every preset uses 1,000 physical qubits per logical qubit with no
+yearly change, as in the framework paper (arXiv 2310.15505, "no systematic
+changes over time"). The floor a user-set decline can reach is now 25 instead
+of 3.
+
+**Before.** Ratios from 32 to 1,000 with no source, shrinking 10% to 23% a year
+down to 3. By 2041 most presets were at the floor of 3.
+
+**Why 1,000.** Published RSA-2048 estimates range from about 700 physical per
+logical (Gidney 2025: 1,399 logical in under a million physical) to about 3,200
+(Gidney and Ekera 2019: 20 million physical), and a surface code at 0.1% error
+needs about 1,000 to 1,500 for large algorithms. **Why 25.** IBM's gross code,
+one of the most efficient codes proposed, is 288 physical for 12 logical
+(24:1); the smallest code that corrects any error needs 5.
+
+**Where.** `physicalLogicalQubitsRatio: 1000, ratioImprovementRate: 0` in the
+presets and `src/store/models.js`; `MINIMUM_PLQR` in `src/store/utils.js`,
+used by `getLogicalQubits` (`qea.js`) and the ratio inputs in `Form.vue`.
+`getAdjustedPLQR` (`roadmapSchema.js`) has the same 25 written out, since that
+file has no imports.
+
+**Effect.** On its own, factoring speed QEA moves from 2032.6 to 2038.9 for
+IBM, 2032.9 to 2043.8 for IonQ and 2029.5 to 2036.2 for QuEra.
+
+**Keep in mind.**
+
+- One ratio for every modality. It is pessimistic for small problems and for
+  vendors with more efficient codes, and optimistic for the largest ones.
+  Working it out from each vendor's error rate and the problem's length would
+  be better, and is a bigger change.
+- A machine with fewer than 1,000 physical qubits counts as 1 logical qubit.
+- Hardware saved before this change keeps its ratio and yearly change, now
+  with the floor of 25. Roadmap files in format 1.0 still bring their own
+  ratio, also floored at 25.
 
 ## 2. Superconducting hardware slowdown: 10^6 (Nov 17, 2026)
 
@@ -67,13 +219,11 @@ polynomial ones at the bottom) are the ones that move.
   lands near 10^4.5 to 10^5.
 - **It still shrinks.** `quantumImprovementRate` (-10% a year) lowers the
   slowdown every year from the current year, as before.
-- **The other modalities were not changed.** Trapped ions use 600,000 ns
-  (10^8.48) and neutral atoms 250 ns (10^5.1), both from gate times. Next to
-  superconducting's rounded-up number, neutral atoms may now look better than
-  they should; if they get the same treatment, it should be from their
-  error-correction cycle.
-- **Cost is separate.** `costFactor` (10^8 for superconducting) was not
-  changed.
+- **The other modalities.** Trapped ions use 600,000 ns (10^8.48). Neutral
+  atoms used 250 ns (10^5.1) and looked better than they should; decision 5
+  moved them to their error-correction round.
+- **Cost.** `costFactor` was not changed here. Decision 6 now computes it
+  from the slowdown, so it follows the 10^6.
 - **Saved and shared hardware.** Hardware the user saved or edited before the
   change keeps 10^3.78 in the browser. Share links name presets, so an old
   link opens with 10^6; a link carrying the user's own hardware keeps its

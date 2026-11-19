@@ -1,6 +1,5 @@
 // Quantum economic advantage (QEA) math, shared by Models.vue and the
-// hardware comparison graph. Moved out of Models.vue unchanged, except that
-// the roadmap's extrapolation type is now passed in instead of read from props.
+// hardware comparison graph.
 
 import * as math from 'mathjs';
 import * as utils from './utils';
@@ -12,23 +11,23 @@ const currentYear = new Date().getFullYear();
 // logScale: search over log10(n) instead of n (firstCrossingLogScale). Same
 // root, in a few dozen steps instead of ~350; used by the hardware comparison,
 // which runs this many times.
-export function getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate, processors, costImprovementRate, year, { logScale = false } = {}) {
-    let adjustmentFactor = Number(hardwareSlowdown) + (year - currentYear) * Math.log10(quantumImprovementRate);
+// slowdown: log10, already worked out for the year (the hardware slowdown for
+// speed, the cost factor for cost). processors: log10 of the classical cores.
+export function getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenaltyFunction, slowdown, processors, { logScale = false } = {}) {
+    let adjustmentFactor = Number(slowdown);
 
-    if (adjustmentFactor == null || isNaN(adjustmentFactor)) {
-        console.log("Adjustment factor is null or NaN");
-        console.log(`adjustment factor: ${adjustmentFactor}, hardwareSlowdown: ${hardwareSlowdown}, quantumImprovementRate: ${quantumImprovementRate}, year: ${year}`);
+    if (slowdown == null || isNaN(adjustmentFactor)) {
+        console.log(`Slowdown or cost factor is null or NaN: ${slowdown}`);
         return 0;
     }
 
     adjustmentFactor = math.max(adjustmentFactor, 0);
 
-    // console.log("processors: ", processors);
-    let effectiveProcessors = processors + (year - currentYear) * Math.log10(costImprovementRate);
-    effectiveProcessors = math.max(effectiveProcessors, 0);
+    // The comparably priced classical machine is the same size every year.
+    const p = Math.pow(10, Number(processors));
 
     function evaluate(n) {
-        let scope = { n: n, p: Math.pow(10, effectiveProcessors) };
+        let scope = { n: n, p };
         let value = logClassicalFunction(n, scope) - logQuantumFunction(n) - logPenaltyFunction(n) - adjustmentFactor;
         return value;
     }
@@ -56,7 +55,7 @@ export function getQuantumAdvantage(logClassicalFunction, logQuantumFunction, lo
     let result = utils.bisectionMethod(evaluate, lowerBound, upperBound, "QA bisection");
 
     if (result === null) {
-        console.log(`null returned!!!! year was ${year} and adjustmentFactor was ${adjustmentFactor}`);
+        console.log(`QA bisection returned null; adjustmentFactor was ${adjustmentFactor}`);
         console.log("lowerBound:", lowerBound, "upperBound:", upperBound);
         console.log("f(lowerBound):", evaluate(lowerBound), "f(upperBound):", evaluate(upperBound));
         return null;
@@ -116,7 +115,7 @@ export function getLogicalQubits(year, roadmap, physicalLogicalQubitsRatio, rati
 
     //log_10 of the PLQR including the ratio improvement rate
     let adjustedPLQR = Math.log10(physicalLogicalQubitsRatio) + (year - currentYear) * Math.log10(ratioImprovementRate);
-    const minimumPLQR = Math.log10(3); //minimum PLQR is 3
+    const minimumPLQR = Math.log10(utils.MINIMUM_PLQR);
     adjustedPLQR = Math.max(adjustedPLQR, minimumPLQR);
 
     //logLogicalQubits has the log_10 of the number of logical qubits
@@ -152,6 +151,41 @@ export function getQuantumFeasible(
     return utils.problemSizeForQubits(qubitsNeeded, logLogicalQubits)
 }
 
+// log10 of the hardware slowdown in a given year. It changes by
+// quantumImprovementRate percent a year and never goes below 0.
+export function slowdownFunction(model) {
+    const slowdown = Number(model.hardwareSlowdown);
+    const rate = Math.log10(utils.percentageToFraction(Number(model.quantumImprovementRate)));
+    return year => Math.max(slowdown + (year === currentYear ? 0 : (year - currentYear) * rate), 0);
+}
+
+// null (or an empty input) means the cost factor is computed; a number is
+// one the user set.
+export function isComputedCostFactor(costFactor) {
+    return costFactor == null || costFactor === '';
+}
+
+// log10 of what one logical operation costs, in classical operations, in a
+// given year. The computed value is the machine's price for one logical step
+// (it costs as much as 10^processors classical cores) shared by its logical
+// qubits. A value the user set changes by costImprovementRate percent a year.
+export function costFactorFunction(model) {
+    if (!isComputedCostFactor(model.costFactor)) {
+        const costFactor = Number(model.costFactor);
+        const rate = Math.log10(utils.percentageToFraction(Number(model.costImprovementRate)));
+        return year => costFactor + (year === currentYear ? 0 : (year - currentYear) * rate);
+    }
+    const slowdownAt = slowdownFunction(model);
+    const processors = Number(model.processors);
+    const ratio = Number(model.physicalLogicalQubitsRatio);
+    const ratioRate = utils.percentageToFraction(Number(model.ratioImprovementRate));
+    return year => {
+        let logLogicalQubits = getLogicalQubits(year, model.roadmap, ratio, ratioRate, model.roadmapUnit, model.extrapolationType);
+        if (!Number.isFinite(logLogicalQubits)) logLogicalQubits = 0;
+        return slowdownAt(year) + processors - Math.max(logLogicalQubits, 0);
+    };
+}
+
 // The feasibility and advantage curves for a model, and the QEA years where
 // they cross: tStar (speed) and tCostStar (cost). A year of 0 means QEA has
 // already been reached; Infinity means not before 3000; null means the
@@ -162,10 +196,8 @@ export function quantumEconomicAdvantage(model, { fast = false } = {}) {
     const search = { logScale: fast };
     const yearTolerance = fast ? 1e-3 : 1e-7;
 
-    let hardwareSlowdown = model.hardwareSlowdown;
     let physicalLogicalQubitsRatio = model.physicalLogicalQubitsRatio;
     let ratioImprovementRate = utils.percentageToFraction(Number(model.ratioImprovementRate));
-    let quantumImprovementRate = utils.percentageToFraction(Number(model.quantumImprovementRate));
     let qubitsNeeded = utils.modelQubitsNeeded(model);
     let roadmapUnit = model.roadmapUnit;
 
@@ -184,18 +216,17 @@ export function quantumEconomicAdvantage(model, { fast = false } = {}) {
     let lqfc = utils.createLoggedFunction(convertQubits(model, model.quantumWork));
 
 
-    let costFactor = (Number(model.costFactor))
-    let costImprovementRate = utils.percentageToFraction(Number(model.costImprovementRate));
-
-    let processors = model.processors;
+    const slowdownAt = slowdownFunction(model);
+    const costFactorAt = costFactorFunction(model);
+    let processors = Number(model.processors);
 
     function qf(roadmap) {
         return year => getQuantumFeasible(year, roadmap, physicalLogicalQubitsRatio, ratioImprovementRate, qubitsNeeded, roadmapUnit, model.extrapolationType)
     }
 
-    function qa(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate) {
-        //should probably be refactored eventually
-        return year => getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenaltyFunction, hardwareSlowdown, quantumImprovementRate, processors, costImprovementRate, year, search)
+    // slowdownOf(year) gives the log10 slowdown, or cost factor, for that year
+    function qa(logClassicalFunction, logQuantumFunction, logPenaltyFunction, slowdownOf) {
+        return year => getQuantumAdvantage(logClassicalFunction, logQuantumFunction, logPenaltyFunction, slowdownOf(year), processors, search)
     }
 
 
@@ -208,9 +239,7 @@ export function quantumEconomicAdvantage(model, { fast = false } = {}) {
         cappedFeasible = function(year) {
             const qubitFeasible = quantumFeasible(year);
 
-            // Compute the year-adjusted hardware slowdown (same formula as getQuantumAdvantage)
-            let adjustedSlowdown = Number(hardwareSlowdown) + (year - currentYear) * Math.log10(quantumImprovementRate);
-            adjustedSlowdown = Math.max(adjustedSlowdown, 0);
+            const adjustedSlowdown = slowdownAt(year);
 
             // Find max problem size within the time budget for this year
             const timeFeasible = utils.findTimeFeasibleProblemSize(lqf, lpf, model.maxComputeTimeLog, adjustedSlowdown);
@@ -219,8 +248,8 @@ export function quantumEconomicAdvantage(model, { fast = false } = {}) {
         };
     }
 
-    let quantumAdvantage = qa(lcf, lqf, lpf, hardwareSlowdown, quantumImprovementRate);
-    let quantumCostAdvantage = qa(lcfc, lqfc, lpf, costFactor, costImprovementRate);
+    let quantumAdvantage = qa(lcf, lqf, lpf, slowdownAt);
+    let quantumCostAdvantage = qa(lcfc, lqfc, lpf, costFactorAt);
 
     // Use capped feasibility for tStar/tCostStar so the QEA point reflects the time constraint
     // Wrap inner functions to return finite values to prevent NaN/Infinity from breaking bisection

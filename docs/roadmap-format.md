@@ -99,5 +99,5 @@ On export, a year that hasn't been edited since import is written back exactly a
 
 ## Converting older files
 
-- **Format 1.0** stored both physical and logical counts, one of them computed from the PLQR. The import keeps only the count in the roadmap's `roadmapUnit` (the one that was reported) and applies the file's PLQR, ratio change and extrapolation type to the calculator. `qubitCategory` becomes `modality`, `qubitDetailed` becomes `technology`, and `source`/`publicationDate` become `source.url` (or `source.citation`) and `source.published`.
+- **Format 1.0** stored both physical and logical counts, one of them computed from the PLQR. The import keeps only the count in the roadmap's `roadmapUnit` (the one that was reported) and applies the file's PLQR (at least 25), ratio change and extrapolation type to the calculator. `qubitCategory` becomes `modality`, `qubitDetailed` becomes `technology`, and `source`/`publicationDate` become `source.url` (or `source.citation`) and `source.published`.
 - **Plain `{ "2024": 100, "2030": 10000 }` objects** are read as physical qubits with no source. The import message asks for a title and source.

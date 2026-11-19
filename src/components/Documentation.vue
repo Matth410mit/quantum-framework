@@ -14,7 +14,8 @@ const rows = [
   { parameter: 'Physical-Logical Qubit Ratio', symbol: 'PLQR', context: 'The number of physical qubits required to represent one logical qubit.' },
   { parameter: 'Physical-Logical Qubit Ratio Improvement Rate', symbol: 'RIR', context: 'The rate at which the physical-logical qubit ratio decreases.' },
   { parameter: 'Connectivity Penalty', symbol: 'P(q)', context: 'A function in terms of the number of logical qubits.' },
-  { parameter: 'Cost Improvement Rate', symbol: 'CIR', context: 'The rate at which the number of processors decreases.' }
+  { parameter: 'Cost Factor', symbol: '10^{\\text{cf}(t)}', context: 'The cost of one quantum operation relative to one classical operation in year t.' },
+  { parameter: 'Cost Improvement Rate', symbol: 'CIR', context: 'The yearly change of a cost factor set by the user.' }
 ];
 
 
@@ -165,8 +166,9 @@ const rows = [
         <p class="text-gray=900 text-justify my-4"> 
             Just as the hardware slowdown evolves based on the quantum improvement rate, the PLQR is influenced by the 
             physical-logical qubit ratio improvement rate (RIR). This adjustment is input and calculated in the same 
-            manner as the quantum improvement rate. The decay of PLQR is limited to a minimum value of 3, 
-            reflecting the constraints imposed by the most basic error correction schemes.
+            manner as the quantum improvement rate. The decay of PLQR is limited to a minimum value of 25, 
+            about the ratio of the most efficient error correction codes published so far. By default every 
+            roadmap uses a PLQR of 1,000 that does not change over time, as in the original framework.
         </p>
         <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Connectivity Penalty"> Connectivity Penalty</h4>
         <p class="text-gray=900 text-justify my-4"> 
@@ -186,26 +188,24 @@ const rows = [
             This input represents the number of processors <span v-html="katex.renderToString('10^p')"></span> that would exist in a classical machine that is 
             comparably priced to the quantum one being considered. The number of processors reduces the classical 
             runtime as dictated by its expression. Like the hardware slowdown, it is input logarithmically.
+            The default of <span v-html="katex.renderToString('10^5')"></span> is about what IBM's list price for 
+            its quantum computers, $1.60 a second, buys in cloud CPU cores. That price has not changed since 2022, 
+            so the comparably priced classical machine stays the same size every year.
         </p>
         <h4 class="text-lg font-medium text-[#1f2937] mt-8" id="Cost Improvement Rate">Cost Improvement Rate</h4>
         <p class="text-gray=900 text-justify my-4"> 
-            The cost improvement rate (CIR) captures the relative rates of cost reduction for quantum and classical 
-            operations over time. Specifically, it is defined as the ratio of the annual rates of change in the 
+            The cost improvement rate (CIR) applies to a cost factor set by the user. It captures the relative rates 
+            of cost reduction for quantum and classical operations over time. Specifically, it is defined as the 
+            ratio of the annual rates of change in the 
             costs of quantum and classical operations. For instance, if quantum costs decrease at a rate of 
             30% per year (0.7 multiplier), while classical costs decrease at a rate of 20% per year 
             (0.8 multiplier), the ratio of change would be 7/8. This implies that quantum costs improve at an 
             effective rate of approximately 12.5% per year relative to classical costs.
         </p>
         <p class="text-gray=900 text-justify my-4"> 
-            While performance improvements influence the hardware slowdown associated with quantum runtimes 
-            in the model, cost reductions primarily determine the number of classical processors that 
-            can be leveraged to speed up classical runtimes. If quantum costs decline more rapidly than 
-            classical costs, the cost-equivalent classical system becomes smaller over time, as fewer 
-            classical processors can be purchased for the same budget. Consequently, in the tool, the 
-            number of classical processors dividing into the classical runtime decreases each year. Both 
-            cost and performance improvements ultimately impact the problem size required for algorithmic 
-            advantage. This assumption applies when quantum costs are improving faster than classical 
-            costs, though users have the flexibility to modify or disregard it if needed.
+            The computed cost factor, described under Cost Inputs, does not use this rate. Its change over time 
+            follows from the hardware: the slowdown falls with the quantum improvement rate, and each logical 
+            qubit's share of the machine's price falls as the roadmap adds qubits.
         </p>
 
         <h2 class="text-2xl font-bold text-[#1f2937]" id="Calculations">Calculations</h2>
@@ -249,7 +249,7 @@ const rows = [
             The generic expression for the advantage line given a year <span v-html="katex.renderToString('t')"></span> (which we'll label Adv()) becomes:
         </p>
         <p class="text-gray=900 text-center my-4"> 
-            <span v-html="katex.renderToString('\\text{Adv}(t) = n \\text{ }|\\text{ } C(n, 10^p * (1 + \\text{CIR} / 100)^{t - t_0}) = 10^{\\text{hws}} * (1 + \\text{QIR} / 100)^{t - t_0} * Q(n) * P(\\text{QPS}^{-1}(n))')"></span>
+            <span v-html="katex.renderToString('\\text{Adv}(t) = n \\text{ }|\\text{ } C(n, 10^p) = 10^{\\text{hws}} * (1 + \\text{QIR} / 100)^{t - t_0} * Q(n) * P(\\text{QPS}^{-1}(n))')"></span>
         </p>
         <p class="text-gray=900 text-justify my-4"> 
             where <span v-html="katex.renderToString('t_0')"></span> is the current year. The calculator also models feasibility
@@ -260,7 +260,7 @@ const rows = [
             size at a given year <span v-html="katex.renderToString('t')"></span> (denoted as Feas(t)) as:
         </p>
         <p class="text-gray=900 text-center my-4"> 
-            <span v-html="katex.renderToString('\\text{Feas}(t) = \\text{QPS}\\left(\\frac{R(t)}{\\text{PLQR} * (1 + \\text{RIR} / 100)^{t - t_0}}\\right)')"></span>
+            <span v-html="katex.renderToString('\\text{Feas}(t) = \\text{QPS}\\left(\\frac{R(t)}{\\max(\\text{PLQR} * (1 + \\text{RIR} / 100)^{t - t_0}, 25)}\\right)')"></span>
         </p>
         <p class="text-gray=900 text-justify my-4"> 
             With these formulations for how the problem size needed for advantage and the maximum feasible problem size 
@@ -308,8 +308,22 @@ const rows = [
             The final adjustment for cost comparison involves incorporating the cost factor (<span v-html="katex.renderToString('10^{\\text{cf}}')"></span>), 
             which represents how much more expensive it is to perform operations on a quantum machine compared 
             to a classical one. This cost factor is analogous to the hardware slowdown for speed and is input 
-            logarithmically. The cost factor can also vary over time, changing at a rate determined by the 
-            cost improvement rate.
+            logarithmically.
+        </p>
+        <p class="text-gray=900 text-justify my-4">
+            By default the calculator computes the cost factor for each year from the other hardware inputs:
+        </p>
+        <p class="text-gray=900 text-center my-4">
+            <span v-html="katex.renderToString('\\text{cf}(t) = \\text{hws}(t) + p - \\log_{10} L(t)')"></span>
+        </p>
+        <p class="text-gray=900 text-justify my-4">
+            where <span v-html="katex.renderToString('\\text{hws}(t)')"></span> is the hardware slowdown in year 
+            <span v-html="katex.renderToString('t')"></span> and <span v-html="katex.renderToString('L(t)')"></span> is the 
+            number of logical qubits available then (at least 1). During one logical step the machine costs as much 
+            as <span v-html="katex.renderToString('10^p')"></span> classical processors running for 
+            <span v-html="katex.renderToString('10^{\\text{hws}(t)}')"></span> operations, and its logical qubits 
+            share that cost. Users can instead set their own cost factor, which then changes each year at the cost 
+            improvement rate.
         </p>
 
         <h3 class="text-xl font-bold text-[#1f2937] mt-8" id="Cost Calculations"> Cost Calculations </h3>
@@ -324,7 +338,7 @@ const rows = [
         </p>
 
         <p class="text-gray-900 text-center my-4">
-            <span v-html="katex.renderToString('\\text{Adv}_c(t) = n \\text{ }|\\text{ } C_w(n) = 10^{\\text{cf}} * (1 + \\text{CIR} / 100)^{t - t_0} * Q_w(n, \\text{QPS}^{-1}(n)) * P(\\text{QPS}^{-1}(n))')"></span>
+            <span v-html="katex.renderToString('\\text{Adv}_c(t) = n \\text{ }|\\text{ } C_w(n) = 10^{\\text{cf}(t)} * Q_w(n, \\text{QPS}^{-1}(n)) * P(\\text{QPS}^{-1}(n))')"></span>
         </p>
 
 

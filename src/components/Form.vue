@@ -26,6 +26,9 @@ import {
 import { hardwareToRoadmap, roadmapToQubitSeries } from '../store/roadmapSchema.js';
 import { applyHardwareToModel, hardwareFieldsOf, sameHardwareFields } from '../store/urlState';
 import { technologyFromModality } from '../store/technology';
+import { costFactorFunction, isComputedCostFactor } from '../store/qea';
+
+const currentYear = new Date().getFullYear();
 
 
 const models = useModelsStore();
@@ -198,6 +201,37 @@ watch(() => model.value, (value) => {
 
 const lockPLQR = computed(() => model.value.roadmapUnit !== "physical");
 
+// The cost factor is computed (null in the model) until the user moves the
+// slider or types a value. The inputs show this year's computed value without
+// saving it, since a saved value counts as an edit to the hardware.
+const costFactorComputed = computed(() => isComputedCostFactor(model.value.costFactor));
+const computedCostFactorNow = computed(() => {
+    const value = costFactorFunction({ ...model.value, costFactor: null })(currentYear);
+    return Number.isFinite(value) ? utils.round(Math.max(value, 0), 1) : 0;
+});
+const costFactorInput = computed({
+    get: () => costFactorComputed.value ? computedCostFactorNow.value : model.value.costFactor,
+    set: (value) => {
+        // Ignore an emptied box; "Use computed" is the way back.
+        if (value === '' || value == null || !Number.isFinite(Number(value))) return;
+        model.value.costFactor = Number(value);
+    },
+});
+function useComputedCostFactor() {
+    model.value.costFactor = null;
+}
+// An emptied box would stay blank while the old value is still used.
+function restoreCostFactorBox(event) {
+    if (event.target.value === '') event.target.value = costFactorInput.value;
+}
+
+// Keep the ratio at or above MINIMUM_PLQR. Runs on change rather than on
+// input so typing 1000 isn't cut off at 1.
+function clampRatio() {
+    const value = Number(model.value.physicalLogicalQubitsRatio);
+    if (Number.isFinite(value) && value < utils.MINIMUM_PLQR) model.value.physicalLogicalQubitsRatio = utils.MINIMUM_PLQR;
+}
+
 
 
 // const editMode = ref(true);
@@ -233,7 +267,8 @@ function handleImportSuccess({ roadmaps, settings = [], notes = [] }) {
         const m = model.value;
         // Older files carry calculator settings; newer ones use the current model's.
         const fileSettings = settings[i] || {};
-        const physicalLogicalQubitsRatio = fileSettings.physicalLogicalQubitsRatio ?? m.physicalLogicalQubitsRatio;
+        const physicalLogicalQubitsRatio = Math.max(utils.MINIMUM_PLQR,
+            Number(fileSettings.physicalLogicalQubitsRatio ?? m.physicalLogicalQubitsRatio));
         const ratioImprovementRate = fileSettings.ratioImprovementRate ?? m.ratioImprovementRate;
 
         const series = roadmapToQubitSeries(rm, {
@@ -325,9 +360,6 @@ function checkLimits() {
         model.value.ratioImprovementRate = -90;
     }
 
-    if (model.physicalLogicalQubitsRatio < 3) {
-        model.physicalLogicalQubitsRatio = 3;
-    }
 }
 
 
@@ -723,24 +755,31 @@ function onAlgorithmChange(type, algorithm) {
                 </div>
 
                 <div class="flex flex-col">
-                    <label class="font-medium text-s" for="costFactor">Classical Compute Cost Advantage</label>
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="font-medium text-s" for="costFactor">Classical Compute Cost Advantage</label>
+                        <span v-if="costFactorComputed" class="text-xs text-gray-500">Computed</span>
+                        <button v-else type="button" class="text-xs text-blue-900 hover:underline"
+                            @click="useComputedCostFactor">Use computed</button>
+                    </div>
                     <p class="text-xs text-gray-600">
-                        The cost of doing one quantum operation as compared to one
-                        classical operation.
+                        The cost of one quantum operation compared with one classical
+                        operation. Computed from the hardware for each year unless you set it.
                     </p>
                     <div class="flex items-center justify-between w-full gap-2 mt-2 mb-4">
-                        <input class="flex-1 accent-gray-800" type="range" id="costFactor" min="0" max="16" step="0.5"
-                            v-model="model.costFactor" />
+                        <input class="flex-1 accent-gray-800" type="range" id="costFactor" min="0" max="16" step="0.1"
+                            v-model="costFactorInput" />
                         <div
                             class="bg-gray-100 p-2 rounded-lg text-center w-1/5 flex items-center justify-center relative">
                             <span class="pr-2">10 </span>
                             <input class="w-[6ch] bg-transparent  absolute t-0 l-0 ml-14 mb-4 text-xs" type="number"
-                                min="0" max="16" step="0.5" id="costFactor" v-model="model.costFactor" />
+                                min="0" max="16" step="0.1" id="costFactor" v-model="costFactorInput"
+                                @blur="restoreCostFactorBox" />
                         </div>
-                        <div
-                            class="bg-gray-100 p-2 rounded-lg text-center w-1/3 flex  items-center justify-center relative">
+                        <div :class="['bg-gray-100 p-2 rounded-lg text-center w-1/3 flex  items-center justify-center relative', costFactorComputed && 'opacity-50']"
+                            :title="costFactorComputed ? 'Applies to a cost factor you set' : ''">
                             <input class="w-[6ch] bg-transparent  text-center" type="number" min="-90" max="90" step="1"
-                                id="costImprovementRate" v-model="model.costImprovementRate" @input="checkLimits" />
+                                id="costImprovementRate" v-model="model.costImprovementRate" @input="checkLimits"
+                                :disabled="costFactorComputed" />
                             <span class="text-xs text-gray-600 text-left">
                                 % change per year
                             </span>
@@ -763,10 +802,10 @@ function onAlgorithmChange(type, algorithm) {
                             in terms of logical qubits.
                         </div>
                         <input class="flex-1 accent-gray-800" type="range" id="physical_logical_ratio"
-                            v-model="model.physicalLogicalQubitsRatio" min="3" max="2000" :disabled="lockPLQR" />
+                            v-model="model.physicalLogicalQubitsRatio" :min="utils.MINIMUM_PLQR" max="2000" :disabled="lockPLQR" />
                         <input class="bg-gray-100 p-2 rounded-lg text-center w-1/5" type="number"
                             id="physical_logical_ratio" v-model="model.physicalLogicalQubitsRatio"
-                            :disabled="lockPLQR" />
+                            :min="utils.MINIMUM_PLQR" @change="clampRatio" :disabled="lockPLQR" />
                         <div
                             class="bg-gray-100 p-2 rounded-lg text-center w-1/3 flex  items-center justify-center relative">
                             <input class="w-[6ch] bg-transparent  text-center" type="number" min="-90" step="1"

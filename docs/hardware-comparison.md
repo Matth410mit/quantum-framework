@@ -14,8 +14,8 @@ it the largest problem each hardware can run. The controls apply to both.
 - **Hardware:** a checkbox list grouped by technology, all ticked to start,
   with Select all and Clear. Clicking a legend entry unticks that hardware.
 - **Speed / Cost:** whether "beats classical" means faster (runtime with the
-  hardware slowdown) or cheaper (work with the cost factor). Speed is the
-  default.
+  hardware slowdown) or cheaper (work with the cost factor, computed for each
+  hardware and year unless the user set one). Speed is the default.
 - **x-axis:** years, from this year to 15 years out (2026–2041 in 2026).
 - **One line per hardware:** every preset and the user's own hardware (see
   below). Colour shows the technology (superconducting, trapped ion, neutral
@@ -176,8 +176,8 @@ after 2070, well past the graph, for algorithms that aren't picked.
 
 - **Constant-factor "speedups":** when the quantum and classical runtimes have
   the same growth (e.g. Sorting, n log n on both sides), the result is
-  floating-point noise. The slowdown and processor terms shrink over time until
-  the two sides are exactly equal. This affects the main QEA graph the same way.
+  floating-point noise. The slowdown shrinks over time until the two sides are
+  exactly equal. This affects the main QEA graph the same way.
 - **Sheet data:** the graph shows whatever the sheet says. For Integer
   Factorization, the "Brenner et al. (2025)" row is O((log n)²) with n = bits,
   so it's the best algorithm on every hardware. That looks like n meaning the

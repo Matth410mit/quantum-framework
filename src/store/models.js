@@ -14,7 +14,7 @@ const modelTemplate = {
     penaltyInput: "sqrt(q)",
     // logical qubits needed for a problem of size n
     qubitsNeeded: "3 * n + 0.002 * n * log(n, 2)",
-    // Same as the IBM 2025 (Superconducting) preset in hardwares.js
+    // Same as the IBM 2025 (Superconducting) preset in hardwarePresets.js
     hardwareName: 'IBM 2025 (Superconducting)',
     roadmap: {
         2024: 156,
@@ -35,10 +35,11 @@ const modelTemplate = {
     roadmapUnit: "physical",
     extrapolationType: 'exponential',
     hardwareSlowdown: 6,
-    costFactor: 8,
+    // null means computed (costFactorFunction in qea.js)
+    costFactor: null,
     quantumImprovementRate: -10,
-    physicalLogicalQubitsRatio: 264,
-    ratioImprovementRate: -23,
+    physicalLogicalQubitsRatio: 1000,
+    ratioImprovementRate: 0,
     costImprovementRate: -10,
     processors: 5,
     maxComputeTimeLog: null,

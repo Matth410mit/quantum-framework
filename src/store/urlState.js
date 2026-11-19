@@ -46,6 +46,8 @@ export function hardwareFieldsOf(source) {
 // Inputs can hold numbers as text ("3.5" from a slider).
 function sameValue(a, b) {
     if (a === b) return true;
+    // null and undefined both mean unset (e.g. a computed cost factor)
+    if (a == null && b == null) return true;
     if (a == null || b == null || a === '' || b === '') return false;
     const x = Number(a), y = Number(b);
     return Number.isFinite(x) && x === y;

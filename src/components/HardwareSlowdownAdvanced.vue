@@ -71,8 +71,9 @@
                 </div>
                 <div v-else>
                     <div class="flex items-center justify-between w-full gap-2">
-                        <input class="flex-1 accent-gray-800" type="range" id="speed" v-model="speed" min="1"
-                            max="1000000" />
+                        <!-- Slider in powers of ten; the box holds the exact ratio. -->
+                        <input class="flex-1 accent-gray-800" type="range" id="speed" v-model="speedExponent" min="0"
+                            max="9" step="0.01" />
                         <input class="bg-gray-100 p-2 rounded-lg text-center w-1/5" type="number" id="speed"
                             v-model="speed" />
                     </div>
@@ -145,6 +146,24 @@ const speed = ref(props.advancedSlowdown.speed);
 const gateOverhead = ref(props.advancedSlowdown.gateOverhead);
 const algorithmConstant = ref(props.advancedSlowdown.algorithmConstant);
 
+// The slider works on log10 of the speed ratio. Moving it rounds the ratio to
+// two significant figures, so 6.48 gives 3,000,000 and 7.40 gives 25,000,000.
+const speedExponent = computed({
+    get: () => {
+        const value = Number(speed.value);
+        return value > 0 ? Math.log10(value) : 0;
+    },
+    set: (exponent) => {
+        speed.value = roundToSignificant(10 ** Number(exponent), 2);
+    },
+});
+
+function roundToSignificant(value, digits) {
+    if (!(value > 0)) return value;
+    const unit = 10 ** (Math.floor(Math.log10(value)) - digits + 1);
+    return Number((Math.round(value / unit) * unit).toPrecision(12));
+}
+
 const manualSpeed = computed(() => {
     return gateTime.value * cpuGHz.value
 })
@@ -164,7 +183,7 @@ function save() {
     let newAdvancedSlowdown = {
         gateTime: gateTime.value,
         cpuGHz: cpuGHz.value,
-        speed: speed.value,
+        speed: Number(speed.value),
         gateOverhead: gateOverhead.value,
         algorithmConstant: algorithmConstant.value,
     }

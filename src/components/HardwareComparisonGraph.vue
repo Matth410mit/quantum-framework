@@ -1,7 +1,7 @@
 <script setup>
 // One line per hardware over time, in two graphs: how far the largest problem
 // it can run is past the smallest problem where quantum wins, speed or cost
-// (crosses 1× in the QEA year), and below it the largest problem it can run.
+// (crosses 1x in the QEA year), and below it the largest problem it can run.
 // Lines are bold from the hardware's QEA year on. The calculation is in
 // store/hardwareComparison.js; the page around it is HardwareComparisonPage.vue,
 // which owns the choices (mode, hidden hardware) so it can put them in links.
@@ -60,7 +60,7 @@ const INK = '#111827'        // gray-900
 const MUTED = '#6b7280'      // gray-500
 const GRID = '#f3f4f6'       // gray-100
 
-// Lines leave the plot above this (Database Search reaches 10^19,000,000×).
+// Lines leave the plot above this (Database Search reaches 10^19,000,000x).
 const Y_CAP = 12
 const Y_FLOOR = -40
 // The problem size graph's axis goes at least to 10^12 and a little past the

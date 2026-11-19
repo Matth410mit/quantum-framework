@@ -372,12 +372,13 @@ export function importRoadmaps(text, fileName = '') {
 // Converting between a roadmap and the calculator's single { year: qubits }
 // series. This is where the calculator's PLQR assumption is applied.
 
-// Same formula as getLogicalQubits in Models.vue: the ratio changes by
-// ratioImprovementRate percent a year from baseYear, and never drops below 3.
+// Same formula as getLogicalQubits in qea.js: the ratio changes by
+// ratioImprovementRate percent a year from baseYear, and never drops below 25
+// (MINIMUM_PLQR in utils.js; this file has no imports).
 export function getAdjustedPLQR(year, plqr, ratioImprovementRate, baseYear) {
   const annualFactor = 1 + ratioImprovementRate / 100;
   const adjusted = plqr * Math.pow(annualFactor, year - baseYear);
-  return Math.max(3, adjusted);
+  return Math.max(25, adjusted);
 }
 
 // Builds the series the calculator plots. The unit is whichever qubit metric

@@ -306,6 +306,11 @@ const regressionMap = new Map();
 // See docs/model-decisions.md.
 export const ROADMAP_GROWTH_PER_YEAR = 1.6;
 
+// The fewest physical qubits per logical qubit the ratio can shrink to. IBM's
+// gross code, one of the most efficient codes proposed, is 288 physical for 12
+// logical (24:1). See docs/model-decisions.md.
+export const MINIMUM_PLQR = 25;
+
 //returns log_10 of the number of qubits available based on inputs and saves the value to the regressionMap
 export function getPhysicalQubits(year, roadmap, extrapolationType, baseFactor = 1) {
   year = parseFloat(year);
